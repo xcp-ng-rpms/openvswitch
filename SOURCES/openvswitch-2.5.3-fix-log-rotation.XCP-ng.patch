@@ -1,0 +1,13 @@
+Index: openvswitch-2.5.3/xenserver/etc_logrotate.d_openvswitch
+===================================================================
+--- openvswitch-2.5.3/xenserver/etc_logrotate.d_openvswitch
++++ openvswitch-2.5.3/xenserver/etc_logrotate.d_openvswitch	2018-11-21 11:52:46.547801053 +0100
+@@ -5,7 +5,7 @@
+ # notice and this notice are preserved.  This file is offered as-is,
+ # without warranty of any kind.
+ 
+-/var/log/openvswitch/*.log {
++/var/log/ovs-*.log {
+ 	daily
+ 	compress
+ 	sharedscripts
