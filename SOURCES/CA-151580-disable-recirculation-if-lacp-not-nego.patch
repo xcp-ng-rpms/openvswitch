@@ -1,0 +1,25 @@
+diff --git a/ofproto/bond.c b/ofproto/bond.c
+index b3e9f4d..42c1697 100644
+--- a/ofproto/bond.c
++++ b/ofproto/bond.c
+@@ -928,6 +928,20 @@ bond_may_recirc(const struct bond *bond, uint32_t *recirc_id,
+ {
+     bool may_recirc = bond->balance == BM_TCP && bond->recirc_id;
+ 
++    if (may_recirc &&
++        bond->lacp_status != LACP_NEGOTIATED &&
++        bond->lacp_fallback_ab) {
++        /* Don't enable recirculation if LACP is not
++         * negotiated. TCP balanced bonds require
++         * successful LACP negotiation.
++         *
++         * XXX: LACP fallback active backup has
++         * potential problems, please refer CA-153746
++         * for more details on what the problem is.
++         */
++        may_recirc = false;
++    }
++
+     if (recirc_id) {
+         *recirc_id = may_recirc ? bond->recirc_id : 0;
+     }

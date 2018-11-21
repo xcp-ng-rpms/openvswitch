@@ -1,0 +1,19 @@
+diff --git a/lib/ovs-thread.c b/lib/ovs-thread.c
+index 7855b3a..eaf3287 100644
+--- a/lib/ovs-thread.c
++++ b/lib/ovs-thread.c
+@@ -515,6 +515,14 @@ parse_cpuinfo(long int *n_cores)
+     long int cores = 0;
+     FILE *stream;
+ 
++    if (access("/proc/xen/capabilities", F_OK) == 0) {
++        VLOG_DBG("OpenvSwitch is running on top of XenServer, reading "
++                 "/proc/cpuinfo to determine number of cores might "
++                 "give inconsistent result, bailing out");
++        *n_cores = 0;
++        return;
++    }
++
+     stream = fopen(file_name, "r");
+     if (!stream) {
+         VLOG_DBG("%s: open failed (%s)", file_name, ovs_strerror(errno));

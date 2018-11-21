@@ -1,0 +1,30 @@
+# HG changeset patch
+# Parent 13de731f4f7e162ddec358fa212b286d245d5dbd
+
+diff --git a/python/automake.mk b/python/automake.mk
+index c0f0db6..6c8d309 100644
+--- a/python/automake.mk
++++ b/python/automake.mk
+@@ -41,16 +41,17 @@ PYCOV_CLEAN_FILES += $(PYFILES:.py=.py,cover)
+ 
+ if HAVE_PYTHON
+ nobase_pkgdata_DATA = $(ovs_pyfiles) $(ovstest_pyfiles)
++base = $(shell echo $$RPM_BUILD_ROOT)
+ ovs-install-data-local:
+ 	$(MKDIR_P) python/ovs
+ 	sed \
+ 		-e '/^##/d' \
+-                -e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
+-                -e 's,[@]RUNDIR[@],$(RUNDIR),g' \
++                -e 's,[@]pkgdatadir[@],$(subst $(base),,$(pkgdatadir)),g' \
++                -e 's,[@]RUNDIR[@],$(subst $(base),,$(RUNDIR)),g' \
+                 -e 's,[@]LOGDIR[@],$(LOGDIR),g' \
+-                -e 's,[@]bindir[@],$(bindir),g' \
+-                -e 's,[@]sysconfdir[@],$(sysconfdir),g' \
+-                -e 's,[@]DBDIR[@],$(DBDIR),g' \
++                -e 's,[@]bindir[@],$(subst $(base),,$(bindir)),g' \
++                -e 's,[@]sysconfdir[@],$(subst $(base),,$(sysconfdir)),g' \
++                -e 's,[@]DBDIR[@],$(subst $(base),,$(DBDIR)),g' \
+ 		< $(srcdir)/python/ovs/dirs.py.template \
+ 		> python/ovs/dirs.py.tmp
+ 	$(MKDIR_P) $(DESTDIR)$(pkgdatadir)/python/ovs
