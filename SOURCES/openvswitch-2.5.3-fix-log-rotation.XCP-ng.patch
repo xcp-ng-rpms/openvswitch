@@ -7,7 +7,7 @@ Index: openvswitch-2.5.3/xenserver/etc_logrotate.d_openvswitch
  # without warranty of any kind.
  
 -/var/log/openvswitch/*.log {
-+/var/log/ovs-*.log {
++/var/log/ovs-*.log /var/log/ovsdb-* {
  	daily
  	compress
  	sharedscripts

@@ -3,7 +3,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.2.3.1.xcp
+Release: 2.2.3.2.xcp
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=refs%2Ftags%2Fv%{version}&prefix=%{name}-%{version}&format=tar.gz#/%{name}-%{version}.tar.gz
 Patch0: 0001-vswitchd-Introduce-mtu_request-column-in-Interface.patch
 Patch1: 0002-bridge-Honor-mtu_request-when-port-is-added.patch
@@ -273,7 +273,7 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 
 %package modules
 Summary: Open vSwitch kernel module
-Release: 2.2.3.1.xcp
+Release: 2.2.3.2.xcp
 Version: %(echo "%{kernel_version}" | tr - .)
 License: GPLv2
 Provides: %{name}-modules = %{kernel_version}
@@ -303,7 +303,7 @@ Open vSwitch Linux kernel module compiled against kernel version
 %endif
 
 %changelog
-* Wed Nov 21 2018 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.2.3.1.xcp
+* Wed Nov 21 2018 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.2.3.2.xcp
 - Fix log rotation
 - https://github.com/xcp-ng/xcp/issues/100
 
