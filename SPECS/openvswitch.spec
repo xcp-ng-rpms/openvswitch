@@ -4,7 +4,9 @@ URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
 Release: 2.2.3
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=refs%2Ftags%2Fv%{version}&prefix=%{name}-%{version}&format=tar.gz#/%{name}-%{version}.tar.gz
+
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz
+
 Patch0: 0001-vswitchd-Introduce-mtu_request-column-in-Interface.patch
 Patch1: 0002-bridge-Honor-mtu_request-when-port-is-added.patch
 Patch2: 0003-ofproto-Honor-mtu_request-even-for-internal-ports.patch
@@ -25,6 +27,10 @@ Patch16: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
 Patch17: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
 Patch18: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
 Patch19: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.2.3#/openvswitch.patches.tar) = 240ee58d6325e73a469485317af17cc4cfec76ec
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
+
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -60,7 +66,8 @@ traffic.
 
 %build
 sh boot.sh
-%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log --with-dbdir=/run/openvswitch %{?with_linux}
+%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log --with-dbdir=/run/openvswitch %{?with_linux} \
+           LDFLAGS="$LDFLAGS -Wl,-rpath=/lib64/citrix"
 
 %{?cov_wrap} %{__make} %{_smp_mflags}
 
@@ -269,6 +276,8 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %if %build_modules
 
 %package modules
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.2.3#/openvswitch.patches.tar) = 240ee58d6325e73a469485317af17cc4cfec76ec
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
 Summary: Open vSwitch kernel module
 Release: 2.2.3
 Version: %(echo "%{kernel_version}" | tr - .)
