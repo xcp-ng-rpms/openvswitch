@@ -1,4 +1,4 @@
-%define _release 2.2.3.4%{dist}
+%define _release 2.2.3.4%{?dist}
 Name: openvswitch
 Summary: Virtual switch
 URL: http://www.openvswitch.org/
