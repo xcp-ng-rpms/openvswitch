@@ -1,4 +1,4 @@
-%define _release 2.2.3.4%{?dist}
+%define _release 2.2.3.5%{?dist}
 Name: openvswitch
 Summary: Virtual switch
 URL: http://www.openvswitch.org/
@@ -7,6 +7,8 @@ License: ASL 2.0 and GPLv2
 Release: %{_release}
 
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=refs%2Ftags%2Fv%{version}&prefix=%{name}-%{version}&format=tar.gz#/%{name}-%{version}.tar.gz
+Source1: openvswitch-ipsec.service
+Source2: ovs-monitor-ipsec
 
 Patch0: 0001-vswitchd-Introduce-mtu_request-column-in-Interface.patch
 Patch1: 0002-bridge-Honor-mtu_request-when-port-is-added.patch
@@ -126,8 +128,12 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 #install python/compat/uuid.py %{buildroot}/%{_datadir}/openvswitch/python
 #install python/compat/argparse.py %{buildroot}/%{_datadir}/openvswitch/python
 
+
 # Get rid of stuff we don't want to make RPM happy.
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
+
+install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
+install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 #%check
 #make check
@@ -312,7 +318,33 @@ Open vSwitch Linux kernel module compiled against kernel version
 
 %endif
 
+
+%package ipsec
+Summary: Open vSwitch IPsec package
+Requires: %{name} = %{version}-%{release}
+Requires: libreswan >= 3.26
+
+%description ipsec
+Provides an Open vSwitch extension allowing to use encrypted
+tunnels using IPsec.
+
+%files ipsec
+%{_unitdir}/openvswitch-ipsec.service
+%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
+
+%post ipsec
+%systemd_post openvswitch-ipsec.service
+
+%preun ipsec
+%systemd_preun openvswitch-ipsec.service
+
+%postun ipsec
+%systemd_postun openvswitch-ipsec.service
+
 %changelog
+* Wen Sep 04 2019 Benjamin Reis <benjamin.reis@vates.fr> - 2.5.3-2.2.3.5
+- Add openvswitch-ipsec package
+
 * Mon Feb 25 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.2.3.3
 - Fix log rotation for /var/log/ovsdb-server.log: do not rotate the .gz files themselves.
 
