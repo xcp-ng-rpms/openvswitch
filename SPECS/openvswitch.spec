@@ -342,7 +342,7 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* Wen Sep 04 2019 Benjamin Reis <benjamin.reis@vates.fr> - 2.5.3-2.2.3.5
+* Wed Sep 04 2019 Benjamin Reis <benjamin.reis@vates.fr> - 2.5.3-2.2.3.5
 - Add openvswitch-ipsec package
 
 * Mon Feb 25 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.2.3.3
