@@ -128,7 +128,6 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 #install python/compat/uuid.py %{buildroot}/%{_datadir}/openvswitch/python
 #install python/compat/argparse.py %{buildroot}/%{_datadir}/openvswitch/python
 
-
 # Get rid of stuff we don't want to make RPM happy.
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
 
