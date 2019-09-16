@@ -1,0 +1,17 @@
+[Unit]
+Description=OVS IPsec daemon
+Requires=openvswitch.service
+After=openvswitch.service
+
+[Service]
+Environment=PYTHONPATH=/usr/share/openvswitch/python
+Type=forking
+PIDFile=/var/run/openvswitch/ovs-monitor-ipsec.pid
+ExecStart=/usr/bin/python2 /usr/share/openvswitch/scripts/ovs-monitor-ipsec \
+        --pidfile=/var/run/openvswitch/ovs-monitor-ipsec.pid \
+        --ike-daemon=libreswan \
+        --log-file --detach --monitor unix:/var/run/openvswitch/db.sock
+ExecStop=/usr/bin/ovs-appctl -t ovs-monitor-ipsec exit
+
+[Install]
+WantedBy=multi-user.target
