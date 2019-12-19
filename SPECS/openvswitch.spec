@@ -3,7 +3,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.2.3
+Release: 2.3.3
 
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz
 
@@ -12,23 +12,28 @@ Patch1: 0002-bridge-Honor-mtu_request-when-port-is-added.patch
 Patch2: 0003-ofproto-Honor-mtu_request-even-for-internal-ports.patch
 Patch3: 0001-mcast-snooping-Flush-ports-mdb-when-VLAN-configurati.patch
 Patch4: 0002-mcast-snooping-Avoid-segfault-for-vswitchd.patch
-Patch5: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
-Patch6: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch7: CP-15129-Convert-to-use-systemd-services.patch
-Patch8: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch9: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch10: CA-151580-disable-recirculation-if-lacp-not-nego.patch
-Patch11: CA-153718-md5-verification-dvsc.patch
-Patch12: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch13: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch14: use-old-db-port-6632-for-dvsc.patch
-Patch15: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch16: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch17: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch18: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
-Patch19: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch5: 0001-lacp-enable-bond-slave-immediately-after-lacp-attach.patch
+Patch6: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
+Patch7: 0002-LACP-Check-active-partner-sys-id.patch
+Patch8: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch9: CP-15129-Convert-to-use-systemd-services.patch
+Patch10: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch11: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch12: CA-151580-disable-recirculation-if-lacp-not-nego.patch
+Patch13: CA-153718-md5-verification-dvsc.patch
+Patch14: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch15: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch16: use-old-db-port-6632-for-dvsc.patch
+Patch17: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch18: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch19: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch20: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch21: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch22: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch23: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
+Patch24: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.2.3#/openvswitch.patches.tar) = 240ee58d6325e73a469485317af17cc4cfec76ec
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.3#/openvswitch.patches.tar) = d49599d6c320d81852b82354534e26297603c7de
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
 
 Requires(post): systemd
@@ -66,8 +71,7 @@ traffic.
 
 %build
 sh boot.sh
-%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log --with-dbdir=/run/openvswitch %{?with_linux} \
-           LDFLAGS="$LDFLAGS -Wl,-rpath=/lib64/citrix"
+%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log/openvswitch --with-dbdir=/run/openvswitch %{?with_linux} 
 
 %{?cov_wrap} %{__make} %{_smp_mflags}
 
@@ -168,6 +172,7 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %{_bindir}/ovsdb-tool
 %{_bindir}/ovs-test
 %{_sbindir}/ovs-bugtool
+%{_sbindir}/ovs-vlan-bug-workaround
 %{_sbindir}/ovs-vswitchd
 %{_sbindir}/ovsdb-server
 %{_datadir}/openvswitch/bugtool-plugins/kernel-info/openvswitch.xml
@@ -206,6 +211,7 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %{_datadir}/openvswitch/vswitch.ovsschema
 %{_datadir}/openvswitch/scripts/ovs-lib
 %{_datadir}/openvswitch/scripts/ovs-bugtool-*
+%{_datadir}/openvswitch/scripts/ovs-check-dead-ifs
 %{_datadir}/openvswitch/scripts/ovs-ctl
 %{_datadir}/openvswitch/scripts/ovs-save
 %{_datadir}/openvswitch/scripts/ovs-start
@@ -220,6 +226,7 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %{_mandir}/man8/ovs-ofctl.8.gz
 %{_mandir}/man1/ovs-pcap.1.gz
 %{_mandir}/man1/ovs-tcpundump.1.gz
+%{_mandir}/man8/ovs-vlan-bug-workaround.8.gz
 %{_mandir}/man8/ovs-vlan-test.8.gz
 %{_mandir}/man8/ovs-vsctl.8.gz
 %{_mandir}/man8/ovs-vswitchd.8.gz
@@ -251,14 +258,12 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %exclude %{_bindir}/ovn-nbctl
 %exclude %{_bindir}/ovn-northd
 %exclude %{_bindir}/ovn-sbctl
-%exclude %{_sbindir}/ovs-vlan-bug-workaround
 %exclude %{_mandir}/man5/ovn-nb.5.gz
 %exclude %{_mandir}/man5/ovn-sb.5.gz
 %exclude %{_mandir}/man5/vtep.5.gz
 %exclude %{_mandir}/man7/ovn-architecture.7.gz
 %exclude %{_mandir}/man8/ovs-l3ping.8.gz
 %exclude %{_mandir}/man8/ovs-parse-backtrace.8.gz
-%exclude %{_mandir}/man8/ovs-vlan-bug-workaround.8.gz
 %exclude %{_mandir}/man8/ovs-pki.8.gz
 %exclude %{_mandir}/man8/ovs-test.8.gz
 %exclude %{_mandir}/man8/vtep-ctl.8.gz
@@ -269,17 +274,16 @@ install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
 %exclude %{_mandir}/man8/ovn-northd.8.gz
 %exclude %{_mandir}/man8/ovn-sbctl.8.gz
 %exclude %{_datadir}/openvswitch/python/ovstest
-%exclude %{_datadir}/openvswitch/scripts/ovs-check-dead-ifs
 %exclude %{_datadir}/openvswitch/scripts/ovs-vtep
 %exclude %{_datadir}/openvswitch/vtep.ovsschema
 
 %if %build_modules
 
 %package modules
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.2.3#/openvswitch.patches.tar) = 240ee58d6325e73a469485317af17cc4cfec76ec
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.3#/openvswitch.patches.tar) = d49599d6c320d81852b82354534e26297603c7de
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
 Summary: Open vSwitch kernel module
-Release: 2.2.3
+Release: 2.3.3
 Version: %(echo "%{kernel_version}" | tr - .)
 License: GPLv2
 Provides: %{name}-modules = %{kernel_version}
@@ -309,6 +313,18 @@ Open vSwitch Linux kernel module compiled against kernel version
 %endif
 
 %changelog
+* Fri Jul 19 2019 Deli Zhang <deli.zhang@citrix.com> - 2.5.3-2.3.3
+- CA-320193: Revert OVS from CCM rpath link
+
+* Wed Jun 19 2019 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.2
+- CA-321784: Fix LACP bond interface flapping
+
+* Wed May 08 2019 Jennifer Herbert <jennifer.herbert@citrix.com> - 2.5.3-2.3.1
+- CA-318197: Correct logging path
+
+* Wed Mar 27 2019 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.0
+- CA-308221: Add OVS patches required by Rackspace
+
 * Mon Apr 23 2018 Simon Rowe <simon.rowe@citrix.com> - 2.5.3-2.2.3
 - CA-288424: Fix sporadic output of incoming packets back to the same port
 
