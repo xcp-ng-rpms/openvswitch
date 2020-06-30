@@ -294,10 +294,10 @@ index 0000000..f0dc685
 +WantedBy=multi-user.target
 diff --git a/xenserver/usr_lib_systemd_system_openvswitch.service b/xenserver/usr_lib_systemd_system_openvswitch.service
 new file mode 100644
-index 0000000..bdcbb70
+index 0000000..31f18ef
 --- /dev/null
 +++ b/xenserver/usr_lib_systemd_system_openvswitch.service
-@@ -0,0 +1,13 @@
+@@ -0,0 +1,15 @@
 +[Unit]
 +Description=Open vSwitch
 +Before=xapi.service xcp-networkd.service network.target
@@ -306,8 +306,10 @@ index 0000000..bdcbb70
 +
 +[Service]
 +Type=forking
++Environment=ASAN_OPTIONS=abort_on_error=1:disable_coredump=0:unmap_shadow_on_exit=1
 +ExecStart=/usr/share/openvswitch/scripts/ovs-start
 +ExecStop=/usr/share/openvswitch/scripts/ovs-ctl stop
++OOMScoreAdjust=-1000
 +
 +[Install]
 +WantedBy=multi-user.target
