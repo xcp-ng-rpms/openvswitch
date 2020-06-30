@@ -1,0 +1,36 @@
+From 7ab4b06537842c0e0de85146b85df52ca189b6d3 Mon Sep 17 00:00:00 2001
+From: Ben Pfaff <blp@ovn.org>
+Date: Thu, 15 Nov 2018 08:25:52 -0800
+Subject: [PATCH 1/1] configure: Check for more specific function to pull in
+ pthread library.
+
+On my laptop, pthread_create() is always available without -lpthread, but
+when I use -fsanitize=address, -lpthread is required to pull in other
+threading functions such as pthread_rwlock_tryrdlock().  Thus, with
+-fsanitize=address I have to manually add -lpthread to link commands one
+way or another.  This commit avoids that problem by checking for a
+function that is sometimes only available in -lpthread.
+
+Tested-by: Yifeng Sun <pkusunyifeng@gmail.com>
+Reviewed-by: Yifeng Sun <pkusunyifeng@gmail.com>
+Signed-off-by: Ben Pfaff <blp@ovn.org>
+---
+ configure.ac | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index bb726f89e..3e97a750c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -77,7 +77,7 @@ AC_SUBST([LT_AGE])
+ AC_SEARCH_LIBS([pow], [m])
+ AC_SEARCH_LIBS([clock_gettime], [rt])
+ AC_SEARCH_LIBS([timer_create], [rt])
+-AC_SEARCH_LIBS([pthread_create], [pthread])
++AC_SEARCH_LIBS([pthread_rwlock_tryrdlock], [pthread])
+ AC_FUNC_STRERROR_R
+ 
+ OVS_CHECK_ESX
+-- 
+2.21.0
+

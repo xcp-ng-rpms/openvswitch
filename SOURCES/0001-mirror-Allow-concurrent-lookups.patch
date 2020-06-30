@@ -1,0 +1,307 @@
+From 4f6780691653db8dbd6af310a84dae33350a3b79 Mon Sep 17 00:00:00 2001
+From: Jarno Rajahalme <jarno@ovn.org>
+Date: Tue, 21 Feb 2017 18:17:04 -0800
+Subject: [PATCH 1/1] mirror: Allow concurrent lookups.
+
+Handler threads use a selection of mirror functions with the
+assumption that the data referred to is RCU protected, while the
+implementation has not provided for this, which can lead to an OVS
+crash.
+
+This patch fixes this by making the mbundle lookup RCU-safe by using
+cmap instead of hmap and postponing mbundle memory free, as wells as
+postponing the frees of the mirrors and the vlan bitmaps of each
+mirror.
+
+Note that mirror stats update is still not accurate if multiple
+threads do it simultaneously.
+
+A less complete version of this patch (using cmap and RCU postpone
+just for the mbridge itself) was tested by Yunjian Wang and was found
+to fix the observed crash when running a script that adds and deletes
+a port repeatedly.
+
+Reported-by: Yunjian Wang <wangyunjian@huawei.com>
+Signed-off-by: Jarno Rajahalme <jarno@ovn.org>
+diff --git a/ofproto/ofproto-dpif-mirror.c b/ofproto/ofproto-dpif-mirror.c
+index 6f8079a3c..ce167226e 100644
+--- a/ofproto/ofproto-dpif-mirror.c
++++ b/ofproto/ofproto-dpif-mirror.c
+@@ -18,7 +18,7 @@
+ 
+ #include <errno.h>
+ 
+-#include "hmap.h"
++#include "cmap.h"
+ #include "hmapx.h"
+ #include "ofproto.h"
+ #include "vlan-bitmap.h"
+@@ -31,7 +31,7 @@ BUILD_ASSERT_DECL(sizeof(mirror_mask_t) * CHAR_BIT >= MAX_MIRRORS);
+ 
+ struct mbridge {
+     struct mirror *mirrors[MAX_MIRRORS];
+-    struct hmap mbundles;
++    struct cmap mbundles;
+ 
+     bool need_revalidate;
+     bool has_mirrors;
+@@ -40,7 +40,7 @@ struct mbridge {
+ };
+ 
+ struct mbundle {
+-    struct hmap_node hmap_node; /* In parent 'mbridge' map. */
++    struct cmap_node cmap_node; /* In parent 'mbridge' map. */
+     struct ofbundle *ofbundle;
+ 
+     mirror_mask_t src_mirrors;  /* Mirrors triggered when packet received. */
+@@ -56,7 +56,12 @@ struct mirror {
+     /* Selection criteria. */
+     struct hmapx srcs;          /* Contains "struct mbundle*"s. */
+     struct hmapx dsts;          /* Contains "struct mbundle*"s. */
+-    unsigned long *vlans;       /* Bitmap of chosen VLANs, NULL selects all. */
++
++    /* This is accessed by handler threads assuming RCU protection (see
++     * mirror_get()), but can be manipulated by mirror_set() without any
++     * explicit synchronization. */
++    OVSRCU_TYPE(unsigned long *) vlans;       /* Bitmap of chosen VLANs, NULL
++                                               * selects all. */
+ 
+     /* Output (exactly one of out == NULL and out_vlan == -1 is true). */
+     struct mbundle *out;        /* Output port or NULL. */
+@@ -84,7 +89,7 @@ mbridge_create(void)
+     mbridge = xzalloc(sizeof *mbridge);
+     ovs_refcount_init(&mbridge->ref_cnt);
+ 
+-    hmap_init(&mbridge->mbundles);
++    cmap_init(&mbridge->mbundles);
+     return mbridge;
+ }
+ 
+@@ -101,7 +106,7 @@ mbridge_ref(const struct mbridge *mbridge_)
+ void
+ mbridge_unref(struct mbridge *mbridge)
+ {
+-    struct mbundle *mbundle, *next;
++    struct mbundle *mbundle;
+     size_t i;
+ 
+     if (!mbridge) {
+@@ -115,12 +120,12 @@ mbridge_unref(struct mbridge *mbridge)
+             }
+         }
+ 
+-        HMAP_FOR_EACH_SAFE (mbundle, next, hmap_node, &mbridge->mbundles) {
++        CMAP_FOR_EACH (mbundle, cmap_node, &mbridge->mbundles) {
+             mbridge_unregister_bundle(mbridge, mbundle->ofbundle);
+         }
+ 
+-        hmap_destroy(&mbridge->mbundles);
+-        free(mbridge);
++        cmap_destroy(&mbridge->mbundles);
++        ovsrcu_postpone(free, mbridge);
+     }
+ }
+ 
+@@ -147,7 +152,7 @@ mbridge_register_bundle(struct mbridge *mbridge, struct ofbundle *ofbundle)
+ 
+     mbundle = xzalloc(sizeof *mbundle);
+     mbundle->ofbundle = ofbundle;
+-    hmap_insert(&mbridge->mbundles, &mbundle->hmap_node,
++    cmap_insert(&mbridge->mbundles, &mbundle->cmap_node,
+                 hash_pointer(ofbundle, 0));
+ }
+ 
+@@ -173,8 +178,9 @@ mbridge_unregister_bundle(struct mbridge *mbridge, struct ofbundle *ofbundle)
+         }
+     }
+ 
+-    hmap_remove(&mbridge->mbundles, &mbundle->hmap_node);
+-    free(mbundle);
++    cmap_remove(&mbridge->mbundles, &mbundle->cmap_node,
++                hash_pointer(ofbundle, 0));
++    ovsrcu_postpone(free, mbundle);
+ }
+ 
+ mirror_mask_t
+@@ -229,6 +235,8 @@ mirror_set(struct mbridge *mbridge, void *aux, const char *name,
+         mirror->out_vlan = -1;
+     }
+ 
++    unsigned long *vlans = ovsrcu_get(unsigned long *, &mirror->vlans);
++
+     /* Get the new configuration. */
+     if (out_bundle) {
+         out = mbundle_lookup(mbridge, out_bundle);
+@@ -246,7 +254,7 @@ mirror_set(struct mbridge *mbridge, void *aux, const char *name,
+     /* If the configuration has not changed, do nothing. */
+     if (hmapx_equals(&srcs_map, &mirror->srcs)
+         && hmapx_equals(&dsts_map, &mirror->dsts)
+-        && vlan_bitmap_equal(mirror->vlans, src_vlans)
++        && vlan_bitmap_equal(vlans, src_vlans)
+         && mirror->out == out
+         && mirror->out_vlan == out_vlan)
+     {
+@@ -255,21 +263,25 @@ mirror_set(struct mbridge *mbridge, void *aux, const char *name,
+         return 0;
+     }
+ 
++    /* XXX: Not sure if these need to be thread safe. */
+     hmapx_swap(&srcs_map, &mirror->srcs);
+     hmapx_destroy(&srcs_map);
+ 
+     hmapx_swap(&dsts_map, &mirror->dsts);
+     hmapx_destroy(&dsts_map);
+ 
+-    free(mirror->vlans);
+-    mirror->vlans = vlan_bitmap_clone(src_vlans);
++    if (vlans || src_vlans) {
++        ovsrcu_postpone(free, vlans);
++        vlans = vlan_bitmap_clone(src_vlans);
++        ovsrcu_set(&mirror->vlans, vlans);
++    }
+ 
+     mirror->out = out;
+     mirror->out_vlan = out_vlan;
+ 
+     /* Update mbundles. */
+     mirror_bit = MIRROR_MASK_C(1) << mirror->idx;
+-    HMAP_FOR_EACH (mbundle, hmap_node, &mirror->mbridge->mbundles) {
++    CMAP_FOR_EACH (mbundle, cmap_node, &mirror->mbridge->mbundles) {
+         if (hmapx_contains(&mirror->srcs, mbundle)) {
+             mbundle->src_mirrors |= mirror_bit;
+         } else {
+@@ -308,7 +320,7 @@ mirror_destroy(struct mbridge *mbridge, void *aux)
+     }
+ 
+     mirror_bit = MIRROR_MASK_C(1) << mirror->idx;
+-    HMAP_FOR_EACH (mbundle, hmap_node, &mbridge->mbundles) {
++    CMAP_FOR_EACH (mbundle, cmap_node, &mbridge->mbundles) {
+         mbundle->src_mirrors &= ~mirror_bit;
+         mbundle->dst_mirrors &= ~mirror_bit;
+         mbundle->mirror_out &= ~mirror_bit;
+@@ -316,10 +328,16 @@ mirror_destroy(struct mbridge *mbridge, void *aux)
+ 
+     hmapx_destroy(&mirror->srcs);
+     hmapx_destroy(&mirror->dsts);
+-    free(mirror->vlans);
++
++    unsigned long *vlans = ovsrcu_get(unsigned long *, &mirror->vlans);
++    if (vlans) {
++        ovsrcu_postpone(free, vlans);
++    }
+ 
+     mbridge->mirrors[mirror->idx] = NULL;
+-    free(mirror);
++    /* mirror_get() might have just read the pointer, so we must postpone the
++     * free. */
++    ovsrcu_postpone(free, mirror);
+ 
+     mirror_update_dups(mbridge);
+ 
+@@ -372,6 +390,9 @@ mirror_update_stats(struct mbridge *mbridge, mirror_mask_t mirrors,
+             continue;
+         }
+ 
++        /* XXX: This is not thread safe, yet we are calling these from the
++         * handler and revalidation threads.  But then, maybe these stats do
++         * not need to be very accurate. */
+         m->packet_count += packets;
+         m->byte_count += bytes;
+     }
+@@ -385,7 +406,10 @@ mirror_update_stats(struct mbridge *mbridge, mirror_mask_t mirrors,
+  * in which a 1-bit indicates that the mirror includes a particular VLAN,
+  * '*dup_mirrors' receives a bitmap of mirrors whose output duplicates mirror
+  * 'index', '*out' receives the output ofbundle (if any), and '*out_vlan'
+- * receives the output VLAN (if any). */
++ * receives the output VLAN (if any).
++ *
++ * Everything returned here is assumed to be RCU protected.
++ */
+ bool
+ mirror_get(struct mbridge *mbridge, int index, const unsigned long **vlans,
+            mirror_mask_t *dup_mirrors, struct ofbundle **out, int *out_vlan)
+@@ -400,8 +424,10 @@ mirror_get(struct mbridge *mbridge, int index, const unsigned long **vlans,
+     if (!mirror) {
+         return false;
+     }
++    /* Assume 'mirror' is RCU protected, i.e., it will not be freed until this
++     * thread quiesces. */
+ 
+-    *vlans = mirror->vlans;
++    *vlans = ovsrcu_get(unsigned long *, &mirror->vlans);
+     *dup_mirrors = mirror->dup_mirrors;
+     *out = mirror->out ? mirror->out->ofbundle : NULL;
+     *out_vlan = mirror->out_vlan;
+@@ -414,9 +440,9 @@ static struct mbundle *
+ mbundle_lookup(const struct mbridge *mbridge, struct ofbundle *ofbundle)
+ {
+     struct mbundle *mbundle;
++    uint32_t hash = hash_pointer(ofbundle, 0);
+ 
+-    HMAP_FOR_EACH_IN_BUCKET (mbundle, hmap_node, hash_pointer(ofbundle, 0),
+-                             &mbridge->mbundles) {
++    CMAP_FOR_EACH_WITH_HASH (mbundle, cmap_node, hash, &mbridge->mbundles) {
+         if (mbundle->ofbundle == ofbundle) {
+             return mbundle;
+         }
+@@ -424,7 +450,7 @@ mbundle_lookup(const struct mbridge *mbridge, struct ofbundle *ofbundle)
+     return NULL;
+ }
+ 
+-/* Looks up each of the 'n_ofbundlees' pointers in 'ofbundlees' as mbundles and
++/* Looks up each of the 'n_ofbundles' pointers in 'ofbundles' as mbundles and
+  * adds the ones that are found to 'mbundles'. */
+ static void
+ mbundle_lookup_multiple(const struct mbridge *mbridge,
+diff --git a/ofproto/ofproto-dpif-mirror.h b/ofproto/ofproto-dpif-mirror.h
+index 6e0dc88cb..efcd318d6 100644
+--- a/ofproto/ofproto-dpif-mirror.h
++++ b/ofproto/ofproto-dpif-mirror.h
+@@ -25,19 +25,31 @@ typedef uint32_t mirror_mask_t;
+ struct ofproto_dpif;
+ struct ofbundle;
+ 
+-struct mbridge *mbridge_create(void);
++/* The following functions are used by handler threads without any locking,
++ * assuming RCU protection. */
++
+ struct mbridge *mbridge_ref(const struct mbridge *);
+ void mbridge_unref(struct mbridge *);
+ bool mbridge_has_mirrors(struct mbridge *);
+-bool mbridge_need_revalidate(struct mbridge *);
+-
+-void mbridge_register_bundle(struct mbridge *, struct ofbundle *);
+-void mbridge_unregister_bundle(struct mbridge *, struct ofbundle *);
+ 
+ mirror_mask_t mirror_bundle_out(struct mbridge *, struct ofbundle *);
+ mirror_mask_t mirror_bundle_src(struct mbridge *, struct ofbundle *);
+ mirror_mask_t mirror_bundle_dst(struct mbridge *, struct ofbundle *);
+ 
++void mirror_update_stats(struct mbridge*, mirror_mask_t, uint64_t packets,
++                         uint64_t bytes);
++bool mirror_get(struct mbridge *, int index, const unsigned long **vlans,
++                mirror_mask_t *dup_mirrors, struct ofbundle **out,
++                int *out_vlan);
++
++/* The remaining functions are assumed to be called by the main thread only. */
++
++struct mbridge *mbridge_create(void);
++bool mbridge_need_revalidate(struct mbridge *);
++
++void mbridge_register_bundle(struct mbridge *, struct ofbundle *);
++void mbridge_unregister_bundle(struct mbridge *, struct ofbundle *);
++
+ int mirror_set(struct mbridge *, void *aux, const char *name,
+                struct ofbundle **srcs, size_t n_srcs,
+                struct ofbundle **dsts, size_t n_dsts,
+@@ -46,10 +58,5 @@ int mirror_set(struct mbridge *, void *aux, const char *name,
+ void mirror_destroy(struct mbridge *, void *aux);
+ int mirror_get_stats(struct mbridge *, void *aux, uint64_t *packets,
+                      uint64_t *bytes);
+-void mirror_update_stats(struct mbridge*, mirror_mask_t, uint64_t packets,
+-                         uint64_t bytes);
+-bool mirror_get(struct mbridge *, int index, const unsigned long **vlans,
+-                mirror_mask_t *dup_mirrors, struct ofbundle **out,
+-                int *out_vlan);
+ 
+ #endif /* ofproto-dpif-mirror.h */

@@ -1,9 +1,15 @@
-%define _release 2.3.3.1%{?dist}
+# Control whether we build with the address sanitizer.
+# Default enabled: (to override: --without asan)
+#%%define with_asan  %{?_without_asan: 0} %{?!_without_asan: 1}
+# Default disabled: (to override: --with asan)
+%define with_asan  %{?_with_asan: 1} %{?!_with_asan: 0}
+
 Name: openvswitch
 Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
+%define _release 2.3.9.1%{?dist}
 Release: %{_release}
 
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=refs%2Ftags%2Fv%{version}&prefix=%{name}-%{version}&format=tar.gz#/%{name}-%{version}.tar.gz
@@ -16,28 +22,31 @@ Patch2: 0003-ofproto-Honor-mtu_request-even-for-internal-ports.patch
 Patch3: 0001-mcast-snooping-Flush-ports-mdb-when-VLAN-configurati.patch
 Patch4: 0002-mcast-snooping-Avoid-segfault-for-vswitchd.patch
 Patch5: 0001-lacp-enable-bond-slave-immediately-after-lacp-attach.patch
-Patch6: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
-Patch7: 0002-LACP-Check-active-partner-sys-id.patch
-Patch8: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch9: CP-15129-Convert-to-use-systemd-services.patch
-Patch10: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch11: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch12: CA-151580-disable-recirculation-if-lacp-not-nego.patch
-Patch13: CA-153718-md5-verification-dvsc.patch
-Patch14: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch15: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch16: use-old-db-port-6632-for-dvsc.patch
-Patch17: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch18: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch19: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch20: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch21: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch22: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch23: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
-Patch24: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch6: 0001-mirror-Allow-concurrent-lookups.patch
+Patch7: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
+Patch8: 0002-LACP-Check-active-partner-sys-id.patch
+Patch9: 0001-configure-Check-for-more-specific-function-to-pull-i.patch
+Patch10: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch11: CP-15129-Convert-to-use-systemd-services.patch
+Patch12: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch13: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch14: CA-151580-disable-recirculation-if-lacp-not-nego.patch
+Patch15: CA-153718-md5-verification-dvsc.patch
+Patch16: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch17: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch18: use-old-db-port-6632-for-dvsc.patch
+Patch19: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch20: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch21: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch22: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch23: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch24: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch25: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
+Patch26: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch27: mlockall-onfault.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.3#/openvswitch.patches.tar) = d49599d6c320d81852b82354534e26297603c7de
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.9#/openvswitch.patches.tar) = 581290ae7e3716e1edfc200be54dce0ca4d01aea
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -45,6 +54,10 @@ Requires(postun): systemd
 BuildRequires: systemd
 BuildRequires: glibc-static, kernel-devel, openssl, openssl-devel, openssl-static, python
 BuildRequires: autoconf, automake, libtool
+%if %{with_asan}
+BuildRequires: libasan
+%endif
+%{?_cov_buildrequires}
 
 %if %undefined module_dir
 %define module_dir updates
@@ -71,19 +84,29 @@ traffic.
 
 %prep
 %autosetup -p1
+%{?_cov_prepare}
 
 %build
 sh boot.sh
+
+%if %{with_asan}
+# Extend RPM's defaults to include address sanitizer
+CFLAGS="-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches   -m64 -mtune=generic -fsanitize=address"
+CXXFLAGS="$CFLAGS"
+LDFLAGS="-Wl,-z,relro -fsanitize=address"
+export CFLAGS CXXFLAGS LDFLAGS
+%endif
+
 %configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log/openvswitch --with-dbdir=/run/openvswitch %{?with_linux} 
 
-%{?cov_wrap} %{__make} %{_smp_mflags}
+%{?_cov_wrap} %{__make} %{_smp_mflags}
 
 %install
 rm -rf %{buildroot}
-%{?cov_wrap} %{__make} install DESTDIR=%{buildroot}
+%{?_cov_wrap} %{__make} install DESTDIR=%{buildroot}
 
 %if %build_modules
-%{?cov_wrap} %{__make} INSTALL_MOD_PATH=%{buildroot} modules_install
+%{?_cov_wrap} %{__make} INSTALL_MOD_PATH=%{buildroot} modules_install
 # mark modules executable so that strip-to-file can strip them
 find %{buildroot}/lib/modules/%{kernel_version} -name "*.ko" -type f | xargs chmod u+x
 %endif
@@ -122,16 +145,15 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch.service \
 install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
          %{buildroot}/%{_unitdir}/openvswitch-xapi-sync.service
 
-install -d -m 755 %{buildroot}/%{_libdir}/xsconsole/plugins-base
-install -m 644 xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py \
-         %{buildroot}/%{_libdir}/xsconsole/plugins-base/XSFeatureVSwitch.py
-
 #install python/compat/uuid.py %{buildroot}/%{_datadir}/openvswitch/python
 #install python/compat/argparse.py %{buildroot}/%{_datadir}/openvswitch/python
 
 # Get rid of stuff we don't want to make RPM happy.
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
 
+%{?_cov_install}
+
+# XCP-ng: ipsec
 install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
 install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
@@ -239,7 +261,6 @@ install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monito
 %{_mandir}/man1/ovs-benchmark.1.gz
 %{_mandir}/man8/ovs-bugtool.8.gz
 %{_mandir}/man8/ovs-ctl.8.gz
-%{_libdir}/xsconsole/plugins-base/
 %{_unitdir}/openvswitch.service
 %{_unitdir}/openvswitch-xapi-sync.service
 
@@ -283,11 +304,13 @@ install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monito
 %exclude %{_datadir}/openvswitch/scripts/ovs-vtep
 %exclude %{_datadir}/openvswitch/vtep.ovsschema
 
+%{?_cov_results_package}
+
 %if %build_modules
 
 %package modules
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.3#/openvswitch.patches.tar) = d49599d6c320d81852b82354534e26297603c7de
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.9#/openvswitch.patches.tar) = 581290ae7e3716e1edfc200be54dce0ca4d01aea
 Summary: Open vSwitch kernel module
 Release: %{_release}
 Version: %(echo "%{kernel_version}" | tr - .)
@@ -342,10 +365,29 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* Thu Dec 19 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.3.1
+* Tue Jun 30 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.9.1
 - Rebase on latest package from CH 8.1
 - Re-add changes to produce openvswitch-ipsec subpackage
-- Drop log rotation patch, issue fixed upstream by changing the log directory
+
+* Mon May 18 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.9
+- CA-339588: vswitchd: Use MCL_ONFAULT
+
+* Tue May 12 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.8
+- CP-33375: Turn off the address sanitizer
+
+* Mon Apr 20 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.7
+- CP-33305: Try and protect OVS from OOM
+- Roll CP-33305-dont-kill-ovs.patch into CP-15129-Convert-to-use-systemd-services.patch
+- CA-331103: Fix crash in mbundle_lookup()
+
+* Tue Mar 24 2020 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.6
+- CA-331103: Turn on the address sanitizer temporarily
+
+* Fri Mar 20 2020 Xin Li <xin.li@citrix.com> - 2.5.3-2.3.5
+- CP-32957: remove the open vSwitch configure dialog from xsconsole
+
+* Fri Feb 21 2020 Steven Woods <steven.woods@citrix.com> - 2.5.3-2.3.4
+- CP33120: Add Coverity build macros
 
 * Fri Jul 19 2019 Deli Zhang <deli.zhang@citrix.com> - 2.5.3-2.3.3
 - CA-320193: Revert OVS from CCM rpath link
