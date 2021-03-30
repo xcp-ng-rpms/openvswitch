@@ -9,10 +9,9 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-%define _release 2.3.9.1%{?dist}
-Release: %{_release}
+Release: 2.3.10.1%{?dist}
 
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=refs%2Ftags%2Fv%{version}&prefix=%{name}-%{version}&format=tar.gz#/%{name}-%{version}.tar.gz
+Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
 Source2: ovs-monitor-ipsec
 
@@ -26,27 +25,28 @@ Patch6: 0001-mirror-Allow-concurrent-lookups.patch
 Patch7: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
 Patch8: 0002-LACP-Check-active-partner-sys-id.patch
 Patch9: 0001-configure-Check-for-more-specific-function-to-pull-i.patch
-Patch10: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch11: CP-15129-Convert-to-use-systemd-services.patch
-Patch12: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch13: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch14: CA-151580-disable-recirculation-if-lacp-not-nego.patch
-Patch15: CA-153718-md5-verification-dvsc.patch
-Patch16: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch17: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch18: use-old-db-port-6632-for-dvsc.patch
-Patch19: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch20: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch21: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch22: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch23: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch24: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch25: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
-Patch26: CP-23607-inject-multicast-query-msg-on-bond-port.patch
-Patch27: mlockall-onfault.patch
+Patch10: 0001-flow-Support-extra-padding-length.patch
+Patch11: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch12: CP-15129-Convert-to-use-systemd-services.patch
+Patch13: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch14: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch15: CA-151580-disable-recirculation-if-lacp-not-nego.patch
+Patch16: CA-153718-md5-verification-dvsc.patch
+Patch17: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch18: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch19: use-old-db-port-6632-for-dvsc.patch
+Patch20: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch21: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch22: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch23: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch24: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch25: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch26: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
+Patch27: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch28: mlockall-onfault.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.9#/openvswitch.patches.tar) = 581290ae7e3716e1edfc200be54dce0ca4d01aea
+Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
+Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 813cd7ef864365e4afa6168fac77b3dd4f8aff2e
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -309,10 +309,9 @@ install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monito
 %if %build_modules
 
 %package modules
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.9#/openvswitch.patches.tar) = 581290ae7e3716e1edfc200be54dce0ca4d01aea
+Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
+Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 813cd7ef864365e4afa6168fac77b3dd4f8aff2e
 Summary: Open vSwitch kernel module
-Release: %{_release}
 Version: %(echo "%{kernel_version}" | tr - .)
 License: GPLv2
 Provides: %{name}-modules = %{kernel_version}
@@ -365,6 +364,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Tue Mar 30 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.10.1
+- Security update
+- Sync to XS82E022
+
 * Tue Jun 30 2020 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.9.1
 - Rebase on latest package from CH 8.1
 - Re-add changes to produce openvswitch-ipsec subpackage
