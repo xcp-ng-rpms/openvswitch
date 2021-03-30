@@ -1,4 +1,4 @@
-%define _release 2.3.3.1%{?dist}
+%define _release 2.3.3.2%{?dist}
 Name: openvswitch
 Summary: Virtual switch
 URL: http://www.openvswitch.org/
@@ -18,23 +18,24 @@ Patch4: 0002-mcast-snooping-Avoid-segfault-for-vswitchd.patch
 Patch5: 0001-lacp-enable-bond-slave-immediately-after-lacp-attach.patch
 Patch6: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
 Patch7: 0002-LACP-Check-active-partner-sys-id.patch
-Patch8: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch9: CP-15129-Convert-to-use-systemd-services.patch
-Patch10: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch11: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch12: CA-151580-disable-recirculation-if-lacp-not-nego.patch
-Patch13: CA-153718-md5-verification-dvsc.patch
-Patch14: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch15: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch16: use-old-db-port-6632-for-dvsc.patch
-Patch17: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch18: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch19: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch20: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch21: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch22: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch23: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
-Patch24: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch8: 0001-flow-Support-extra-padding-length.patch
+Patch9: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch10: CP-15129-Convert-to-use-systemd-services.patch
+Patch11: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch12: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch13: CA-151580-disable-recirculation-if-lacp-not-nego.patch
+Patch14: CA-153718-md5-verification-dvsc.patch
+Patch15: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch16: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch17: use-old-db-port-6632-for-dvsc.patch
+Patch18: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch19: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch20: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch21: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch22: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch23: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch24: CP-23607-Send-learning-pkt-when-non-act-bond-slave-failed.patch
+Patch25: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/openvswitch.pg/archive?format=tar&at=2.3.3#/openvswitch.patches.tar) = d49599d6c320d81852b82354534e26297603c7de
 Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/openvswitch/archive?at=refs%2Ftags%2Fv2.5.3&prefix=openvswitch-2.5.3&format=tar.gz#/openvswitch-2.5.3.tar.gz) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
@@ -342,6 +343,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Tue Mar 30 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.3.2
+- Security update (CVE-2020-35498)
+- Backport 0001-flow-Support-extra-padding-length.patch from the 8.2 update
+
 * Thu Dec 19 2019 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.3.1
 - Rebase on latest package from CH 8.1
 - Re-add changes to produce openvswitch-ipsec subpackage
