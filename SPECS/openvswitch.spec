@@ -9,7 +9,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.10.1%{?dist}
+Release: 2.3.10.2%{?dist}
 
 Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
@@ -364,6 +364,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Tue Jan 11 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.10.2
+- Rebuild for updated xs-openssl in XCP-ng 8.2.1
+- Not sure it's required but better safe than sorry
+
 * Tue Mar 30 2021 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.10.1
 - Security update
 - Sync to XS82E022
