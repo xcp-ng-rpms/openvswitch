@@ -1,0 +1,82 @@
+From 90061ea7d1dd90fd5bf4be2bbae3cd301ad71033 Mon Sep 17 00:00:00 2001
+From: Ben Pfaff <blp@ovn.org>
+Date: Mon, 5 Nov 2018 18:35:16 -0800
+Subject: [PATCH] bond: Fix LACP fallback to active-backup when recirc is
+ enabled.
+
+Reported-by: Arun Navasivasakthivelsamy <arunkum.navasiv@nutanix.com>
+Tested-by: Arun Navasivasakthivelsamy <arunkum.navasiv@nutanix.com>
+Signed-off-by: Ben Pfaff <blp@ovn.org>
+diff --git a/ofproto/bond.c b/ofproto/bond.c
+old mode 100644
+new mode 100755
+index 0bdfdf118..5b685b5cd
+--- a/ofproto/bond.c
++++ b/ofproto/bond.c
+@@ -188,6 +188,7 @@ static struct bond_slave *choose_output_slave(const struct bond *,
+                                               uint16_t vlan)
+     OVS_REQ_RDLOCK(rwlock);
+ static void update_recirc_rules__(struct bond *bond);
++static bool bond_is_falling_back_to_ab(const struct bond *);
+ 
+ /* Attempts to parse 's' as the name of a bond balancing mode.  If successful,
+  * stores the mode in '*balance' and returns true.  Otherwise returns false
+@@ -651,6 +652,13 @@ bond_run(struct bond *bond, enum lacp_status lacp_status)
+     if (bond->lacp_status != lacp_status) {
+         bond->lacp_status = lacp_status;
+         bond->bond_revalidate = true;
++
++        /* Change in LACP status can affect whether the bond is falling back to
++         * active-backup.  Make sure to create or destroy buckets if
++         * necessary.  */
++        if (bond_is_falling_back_to_ab(bond) || !bond->hash) {
++            bond_entry_reset(bond);
++        }
+     }
+ 
+     /* Enable slaves based on link status and LACP feedback. */
+@@ -759,6 +767,15 @@ bond_compose_learning_packet(struct bond *bond, const struct eth_addr eth_src,
+     return packet;
+ }
+ 
++
++static bool
++bond_is_falling_back_to_ab(const struct bond *bond)
++{
++    return (bond->lacp_fallback_ab
++            && (bond->balance == BM_SLB || bond->balance == BM_TCP)
++            && bond->lacp_status == LACP_CONFIGURED);
++}
++
+ /* Checks whether a packet that arrived on 'slave_' within 'bond', with an
+  * Ethernet destination address of 'eth_dst', should be admitted.
+  *
+@@ -926,7 +943,8 @@ bool
+ bond_may_recirc(const struct bond *bond, uint32_t *recirc_id,
+                 uint32_t *hash_bias)
+ {
+-    bool may_recirc = bond->balance == BM_TCP && bond->recirc_id;
++    bool may_recirc = bond->balance == BM_TCP && bond->recirc_id
++            && !bond_is_falling_back_to_ab(bond);
+ 
+     if (recirc_id) {
+         *recirc_id = may_recirc ? bond->recirc_id : 0;
+@@ -980,7 +998,8 @@ static bool
+ bond_is_balanced(const struct bond *bond) OVS_REQ_RDLOCK(rwlock)
+ {
+     return bond->rebalance_interval
+-        && (bond->balance == BM_SLB || bond->balance == BM_TCP);
++        && (bond->balance == BM_SLB || bond->balance == BM_TCP)
++        && !(bond->lacp_fallback_ab && bond->lacp_status == LACP_CONFIGURED);
+ }
+ 
+ /* Notifies 'bond' that 'n_bytes' bytes were sent in 'flow' within 'vlan'. */
+@@ -1635,7 +1654,7 @@ bond_init(void)
+ static void
+ bond_entry_reset(struct bond *bond)
+ {
+-    if (bond->balance != BM_AB) {
++    if (bond->balance != BM_AB && !bond_is_falling_back_to_ab(bond)) {
+         size_t hash_len = BOND_BUCKETS * sizeof *bond->hash;
+ 
+         if (!bond->hash) {

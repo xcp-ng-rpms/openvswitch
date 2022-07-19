@@ -1,0 +1,169 @@
+From a8448cb170e3bbe0ca73c7c72aead11b4ec77e29 Mon Sep 17 00:00:00 2001
+From: Nitin Katiyar <nitin.katiyar@ericsson.com>
+Date: Sun, 9 Jun 2019 14:17:45 +0000
+Subject: [PATCH] lacp: Avoid packet drop on LACP bond after link up
+
+Problem:
+========
+The OVS state machine that enables and disables bond slaves runs in
+the OVS main thread. The OVS code that processes received LACP packets
+runs in a different thread. Until now, when the latter processes a LACP
+PDU that should enable a slave, the slave was only enabled when the
+main thread was able to run the state machine. In some cases this led
+to delays of up to 350ms when the main thread was busy or not scheduled,
+which led to corresponding delays in which packets were dropped due to
+the bond-admissibility check.
+
+Fix:
+====
+When a LACP PDU is received, evaluate whether LACP slave can be enabled
+(slave_may_enable()) and set LACP slave's may_enable from the datapath
+thread itself. When may_enable = TRUE, it means L1 state is UP and
+LACP-SYNC is done and it is waiting for the main thread to enable the
+slave. Relax the check in bond_check_admissibility() to check for both
+"enable" and "may_enable" of the LACP slave. This would avoid dropping
+of packets until the main thread enables the slave from bundle_run().
+
+Signed-off-by: Manohar Krishnappa Chidambaraswamy <manukc@gmail.com>
+Co-authored-by: Manohar Krishnappa Chidambaraswamy <manukc@gmail.com>
+Signed-off-by: Nitin Katiyar <nitin.katiyar@ericsson.com>
+Signed-off-by: Ben Pfaff <blp@ovn.org>
+diff --git a/lib/lacp.c b/lib/lacp.c
+index 1a525fc63..bdaf7ad1d 100644
+--- a/lib/lacp.c
++++ b/lib/lacp.c
+@@ -150,6 +150,7 @@ static struct slave *slave_lookup(const struct lacp *, const void *slave)
+     OVS_REQUIRES(mutex);
+ static bool info_tx_equal(struct lacp_info *, struct lacp_info *)
+     OVS_REQUIRES(mutex);
++static bool slave_may_enable__(struct slave *slave) OVS_REQUIRES(mutex);
+ 
+ static unixctl_cb_func lacp_unixctl_show;
+ 
+@@ -317,7 +318,7 @@ lacp_is_active(const struct lacp *lacp) OVS_EXCLUDED(mutex)
+ /* Processes 'packet' which was received on 'slave_'.  This function should be
+  * called on all packets received on 'slave_' with Ethernet Type ETH_TYPE_LACP.
+  */
+-void
++bool
+ lacp_process_packet(struct lacp *lacp, const void *slave_,
+                     const struct dp_packet *packet)
+     OVS_EXCLUDED(mutex)
+@@ -326,6 +327,7 @@ lacp_process_packet(struct lacp *lacp, const void *slave_,
+     const struct lacp_pdu *pdu;
+     long long int tx_rate;
+     struct slave *slave;
++    bool lacp_may_enable = false;
+ 
+     lacp_lock();
+     slave = slave_lookup(lacp, slave_);
+@@ -355,8 +357,14 @@ lacp_process_packet(struct lacp *lacp, const void *slave_,
+         slave->partner = pdu->actor;
+     }
+ 
++    /* Evaluate may_enable here to avoid dropping of packets till main thread
++     * sets may_enable to true. */
++    lacp_may_enable = slave_may_enable__(slave);
++
+ out:
+     lacp_unlock();
++
++    return lacp_may_enable;
+ }
+ 
+ /* Returns the lacp_status of the given 'lacp' object (which may be NULL). */
+diff --git a/lib/lacp.h b/lib/lacp.h
+index f35cff56a..0dfaef05c 100644
+--- a/lib/lacp.h
++++ b/lib/lacp.h
+@@ -46,7 +46,7 @@ struct lacp *lacp_ref(const struct lacp *);
+ void lacp_configure(struct lacp *, const struct lacp_settings *);
+ bool lacp_is_active(const struct lacp *);
+ 
+-void lacp_process_packet(struct lacp *, const void *slave,
++bool lacp_process_packet(struct lacp *, const void *slave,
+                          const struct dp_packet *packet);
+ enum lacp_status lacp_status(const struct lacp *);
+ 
+diff --git a/ofproto/bond.c b/ofproto/bond.c
+index 5b685b5cd..bd13c318e 100644
+--- a/ofproto/bond.c
++++ b/ofproto/bond.c
+@@ -797,6 +797,7 @@ bond_check_admissibility(struct bond *bond, const void *slave_,
+ {
+     enum bond_verdict verdict = BV_DROP;
+     struct bond_slave *slave;
++    static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(1, 5);
+ 
+     ovs_rwlock_rdlock(&rwlock);
+     slave = bond_slave_lookup(bond, slave_);
+@@ -814,7 +815,11 @@ bond_check_admissibility(struct bond *bond, const void *slave_,
+      * drop all incoming traffic except if lacp_fallback_ab is enabled. */
+     switch (bond->lacp_status) {
+     case LACP_NEGOTIATED:
+-        verdict = slave->enabled ? BV_ACCEPT : BV_DROP;
++        /* To reduce packet-drops due to delay in enabling of slave (post
++         * LACP-SYNC), from main thread, check for may_enable as well.
++         * When may_enable is TRUE, it means LACP is UP and waiting for the
++         * main thread to run LACP state machine and enable the slave. */
++        verdict = (slave->enabled || slave->may_enable) ? BV_ACCEPT : BV_DROP;
+         goto out;
+     case LACP_CONFIGURED:
+         if (!bond->lacp_fallback_ab) {
+@@ -845,8 +850,6 @@ bond_check_admissibility(struct bond *bond, const void *slave_,
+         /* Drop all packets which arrive on backup slaves.  This is similar to
+          * how Linux bonding handles active-backup bonds. */
+         if (bond->active_slave != slave) {
+-            static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(1, 5);
+-
+             VLOG_DBG_RL(&rl, "active-backup bond received packet on backup"
+                         " slave (%s) destined for " ETH_ADDR_FMT,
+                         slave->name, ETH_ADDR_ARGS(eth_dst));
+@@ -868,6 +871,19 @@ bond_check_admissibility(struct bond *bond, const void *slave_,
+ 
+     OVS_NOT_REACHED();
+ out:
++    if (slave && (verdict != BV_ACCEPT)) {
++        VLOG_DBG_RL(&rl, "slave (%s): Admissibility verdict is to drop pkt %s."
++                    "active slave: %s, may_enable: %s enable: %s "
++                    "LACP status:%d",
++                    slave->name,
++                    (verdict == BV_DROP_IF_MOVED) ?
++                        "as different port is learned" : "",
++                    (bond->active_slave == slave) ? "true" : "false",
++                    slave->may_enable ? "true" : "false",
++                    slave->enabled ? "true" : "false",
++                    bond->lacp_status);
++    }
++
+     ovs_rwlock_unlock(&rwlock);
+     return verdict;
+ 
+diff --git a/ofproto/ofproto-dpif-xlate.c b/ofproto/ofproto-dpif-xlate.c
+index f4138df24..ed90bb1c0 100644
+--- a/ofproto/ofproto-dpif-xlate.c
++++ b/ofproto/ofproto-dpif-xlate.c
+@@ -2685,6 +2685,7 @@ process_special(struct xlate_ctx *ctx, const struct xport *xport)
+     const struct xbridge *xbridge = ctx->xbridge;
+     const struct dp_packet *packet = ctx->xin->packet;
+     enum slow_path_reason slow;
++    bool lacp_may_enable;
+ 
+     if (!xport) {
+         slow = 0;
+@@ -2705,7 +2706,14 @@ process_special(struct xlate_ctx *ctx, const struct xport *xport)
+     } else if (xport->xbundle && xport->xbundle->lacp
+                && flow->dl_type == htons(ETH_TYPE_LACP)) {
+         if (packet) {
+-            lacp_process_packet(xport->xbundle->lacp, xport->ofport, packet);
++            lacp_may_enable = lacp_process_packet(xport->xbundle->lacp,
++                                                  xport->ofport, packet);
++            /* Update LACP status in bond-slave to avoid packet-drops until
++             * LACP state machine is run by the main thread. */
++            if (xport->xbundle->bond && lacp_may_enable) {
++                bond_slave_set_may_enable(xport->xbundle->bond, xport->ofport,
++                                          lacp_may_enable);
++            }
+         }
+         slow = SLOW_LACP;
+     } else if ((xbridge->stp || xbridge->rstp) &&
