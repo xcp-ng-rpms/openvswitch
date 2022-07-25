@@ -9,7 +9,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.11.1%{?dist}
+Release: 2.3.11.2%{?dist}
 
 Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
@@ -368,12 +368,12 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* Tue Jul 19 2022 Gael Duperrey <gduperrey@vates.fr> - 2.5.3-2.3.11
-- Security update
-- Sync to XS82ECU1008
-- Thu Mar 24 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.11
-- CA-364343: Honour updelay when LACP is used
-- CA-367973: Backport bond-related patches to fix XSI-1198
+* Mon Jul 25 2022 Gael Duperrey <gduperrey@vates.fr> - 2.5.3-2.3.11.2
+- Sync to hotfix XS82ECU1008
+- *** Upstream changelog ***
+- * Thu Mar 24 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.11
+- - CA-364343: Honour updelay when LACP is used
+- - CA-367973: Backport bond-related patches to fix XSI-1198
 
 * Tue Jan 11 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.10.2
 - Rebuild for updated xs-openssl in XCP-ng 8.2.1
