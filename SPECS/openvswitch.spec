@@ -9,7 +9,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.11.2%{?dist}
+Release: 2.3.12.1%{?dist}
 
 Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
@@ -26,31 +26,33 @@ Patch7: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
 Patch8: 0001-bond-send-learning-pkg-when-non-active-slave-failed.patch
 Patch9: 0002-LACP-Check-active-partner-sys-id.patch
 Patch10: 0001-configure-Check-for-more-specific-function-to-pull-i.patch
-Patch11: 0001-bond-Honor-updelay-and-downdelay-when-LACP-is-in-use.patch
-Patch12: 0001-bond-Fix-LACP-fallback-to-active-backup-when-recirc-.patch
-Patch13: 0001-bond-Remove-executable-bit-from-bond.c.patch
-Patch14: 0001-lacp-Avoid-packet-drop-on-LACP-bond-after-link-up.patch
-Patch15: 0001-lacp-report-desync-in-ovs-threads-enabling-slave.patch
-Patch16: 0001-ofproto-bond-Improve-admissibility-debug-readability.patch
-Patch17: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch18: CP-15129-Convert-to-use-systemd-services.patch
-Patch19: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch20: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch21: CA-153718-md5-verification-dvsc.patch
-Patch22: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch23: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch24: use-old-db-port-6632-for-dvsc.patch
-Patch25: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch26: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch27: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch28: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch29: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch30: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch31: CP-23607-inject-multicast-query-msg-on-bond-port.patch
-Patch32: mlockall-onfault.patch
+Patch11: 0001-flow-Support-extra-padding-length.patch
+Patch12: 0001-bond-Honor-updelay-and-downdelay-when-LACP-is-in-use.patch
+Patch13: 0001-bond-Fix-LACP-fallback-to-active-backup-when-recirc-.patch
+Patch14: 0001-bond-Remove-executable-bit-from-bond.c.patch
+Patch15: 0001-lacp-Avoid-packet-drop-on-LACP-bond-after-link-up.patch
+Patch16: 0001-lacp-report-desync-in-ovs-threads-enabling-slave.patch
+Patch17: 0001-ofproto-bond-Improve-admissibility-debug-readability.patch
+Patch18: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch19: CP-15129-Convert-to-use-systemd-services.patch
+Patch20: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch21: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch22: CA-153718-md5-verification-dvsc.patch
+Patch23: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch24: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch25: use-old-db-port-6632-for-dvsc.patch
+Patch26: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch27: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch28: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch29: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch30: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch31: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch32: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch33: mlockall-onfault.patch
+Patch34: hide-logrotate-script-error.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = ef2c54f566fdb44f96ee9c9c0c4e86dc48c9ea64
+Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -314,7 +316,7 @@ install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monito
 
 %package modules
 Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = ef2c54f566fdb44f96ee9c9c0c4e86dc48c9ea64
+Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
 Summary: Open vSwitch kernel module
 Version: %(echo "%{kernel_version}" | tr - .)
 License: GPLv2
@@ -344,7 +346,6 @@ Open vSwitch Linux kernel module compiled against kernel version
 
 %endif
 
-
 %package ipsec
 Summary: Open vSwitch IPsec package
 Requires: %{name} = %{version}-%{release}
@@ -368,6 +369,13 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Wed Sep 14 2022 Gael Duperrey <gduperrey@vates.fr> - 2.5.3-2.3.12.1
+- Sync to hotfix XS82ECU1017
+- *** Upstream changelog ***
+- * Mon Aug 08 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.12
+- - CA-351960 / CA-369139: CVE-2020-35498: Support extra padding length
+- - CA-357261: Hide expected errors from logrotate script
+
 * Mon Jul 25 2022 Gael Duperrey <gduperrey@vates.fr> - 2.5.3-2.3.11.2
 - Sync to hotfix XS82ECU1008
 - *** Upstream changelog ***
