@@ -57,6 +57,10 @@ Patch31: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
 Patch32: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 Patch33: mlockall-onfault.patch
 Patch34: hide-logrotate-script-error.patch
+
+# XCP-ng patches
+Patch1000: openvswitch-2.5.3-CVE-2023-1668.backport.patch
+
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -372,6 +376,9 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* next - 2.5.3-2.3.13.2
+- Backport fix for CVE-2023-1668: Remote traffic denial of service via crafted packets with IP proto 0
+
 * Tue Aug 30 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.13.1
 - Rebase on latest package from CH 8.3 Preview
 - Re-add changes to produce openvswitch-ipsec subpackage
