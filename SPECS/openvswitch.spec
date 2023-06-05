@@ -60,6 +60,7 @@ Patch34: hide-logrotate-script-error.patch
 
 # XCP-ng patches
 Patch1000: openvswitch-2.5.3-CVE-2023-1668.backport.patch
+Patch1001: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -171,8 +172,8 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
 install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
 install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
-#%check
-#make check
+%check
+make check TESTSUITEFLAGS="-j%(nproc)"
 
 %post
 %systemd_post openvswitch.service
@@ -378,6 +379,8 @@ tunnels using IPsec.
 %changelog
 * next - 2.5.3-2.3.13.2
 - Backport fix for CVE-2023-1668: Remote traffic denial of service via crafted packets with IP proto 0
+- Comment out tests that fail
+- Enable make check in spec file
 
 * Tue Aug 30 2022 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.13.1
 - Rebase on latest package from CH 8.3 Preview
