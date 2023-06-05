@@ -15,7 +15,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 Source0: openvswitch-2.5.3.tar.gz
 
 # XCP-ng additional sources
@@ -377,7 +377,7 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* next - 2.5.3-2.3.13.2
+* Mon Jun 05 2023 David Morel <david.morel@vates.fr> - 2.5.3-2.3.13.2
 - Backport fix for CVE-2023-1668: Remote traffic denial of service via crafted packets with IP proto 0
 - Comment out tests that fail
 - Enable make check in spec file
