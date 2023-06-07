@@ -173,7 +173,7 @@ install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
 install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %check
-make check TESTSUITEFLAGS="-j%(nproc)"
+make check
 
 %post
 %systemd_post openvswitch.service
