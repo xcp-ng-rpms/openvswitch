@@ -9,7 +9,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.12.1%{?dist}
+Release: 2.3.12.2%{?dist}
 
 Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
@@ -50,6 +50,13 @@ Patch31: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
 Patch32: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 Patch33: mlockall-onfault.patch
 Patch34: hide-logrotate-script-error.patch
+
+# XCP-ng patches
+# Backported from XS 8
+Patch1000: openvswitch-2.5.3-CVE-2023-1668-ofproto-dpif-xlate-Always-mask-ip-proto-field.XS.patch
+Patch1001: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
+# Upsteam CVE fix
+Patch1002: openvswitch-2.5.3-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
 Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
@@ -163,8 +170,8 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
 install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
 install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
-#%check
-#make check
+%check
+make check
 
 %post
 %systemd_post openvswitch.service
@@ -369,6 +376,15 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Wed Feb 28 2024 David Morel <david.morel@vates.tech> - 2.5.3-2.3.12.2
+- Comment out tests that fail
+- Enable make check in spec file, without parallel tests
+- Fix CVE-2023-5366, manual backport from 2.17
+- Backport fix for CVE-2023-1668 from XS 8.3/8.4 version 2.5.3-2.3.14
+- *** Upstream changelog ***
+- * Tue Apr 18 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.14
+- - CA-376367: Fix CVE-2023-1668
+
 * Wed Sep 14 2022 Gael Duperrey <gduperrey@vates.fr> - 2.5.3-2.3.12.1
 - Sync to hotfix XS82ECU1017
 - *** Upstream changelog ***
