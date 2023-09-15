@@ -1,6 +1,6 @@
-%global package_speccommit a26d7fec8b64898ee6dc2ad34cf6b3481a4d3222
+%global package_speccommit 30a3871f95256dbd35480d24029207bbbc8a6c52
 %global usver 2.5.3
-%global xsver 2.3.13
+%global xsver 2.3.14
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v2.5.3
 
@@ -40,27 +40,27 @@ Patch14: 0001-bond-Remove-executable-bit-from-bond.c.patch
 Patch15: 0001-lacp-Avoid-packet-drop-on-LACP-bond-after-link-up.patch
 Patch16: 0001-lacp-report-desync-in-ovs-threads-enabling-slave.patch
 Patch17: 0001-ofproto-bond-Improve-admissibility-debug-readability.patch
-Patch18: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch19: CP-15129-Convert-to-use-systemd-services.patch
-Patch20: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch21: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch22: CA-153718-md5-verification-dvsc.patch
-Patch23: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch24: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch25: use-old-db-port-6632-for-dvsc.patch
-Patch26: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch27: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch28: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch29: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch30: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch31: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch32: CP-23607-inject-multicast-query-msg-on-bond-port.patch
-Patch33: mlockall-onfault.patch
-Patch34: hide-logrotate-script-error.patch
+Patch18: 0001-ofproto-dpif-xlate-Always-mask-ip-proto-field.patch
+Patch19: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch20: CP-15129-Convert-to-use-systemd-services.patch
+Patch21: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch22: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch23: CA-153718-md5-verification-dvsc.patch
+Patch24: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch25: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch26: use-old-db-port-6632-for-dvsc.patch
+Patch27: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch28: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch29: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch30: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch31: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch32: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch33: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch34: mlockall-onfault.patch
+Patch35: hide-logrotate-script-error.patch
 
 # XCP-ng patches
-Patch1000: openvswitch-2.5.3-CVE-2023-1668.backport.patch
-Patch1001: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
+Patch1000: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -377,6 +377,13 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Sep 15 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.14.1
+- Update to 2.5.3-2.3.14
+- Drop openvswitch-2.5.3-CVE-2023-1668.backport.patch, now patched in XenServer's RPM
+- *** Upstream changelog ***
+- * Tue Apr 18 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.14
+- - CA-376367: Fix CVE-2023-1668
+
 * Mon Jun 05 2023 David Morel <david.morel@vates.fr> - 2.5.3-2.3.13.2
 - Backport fix for CVE-2023-1668: Remote traffic denial of service via crafted packets with IP proto 0
 - Comment out tests that fail

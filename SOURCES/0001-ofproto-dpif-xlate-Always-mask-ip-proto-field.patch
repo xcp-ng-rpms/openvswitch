@@ -1,20 +1,8 @@
-From 602dea8c9740339dd8da4e260ba6699ca595f5a5 Mon Sep 17 00:00:00 2001
+From 7fa0106e8594c34f9e16efd87a58e38a947c6c5b Mon Sep 17 00:00:00 2001
 From: Aaron Conole <aconole@redhat.com>
 Date: Fri, 31 Mar 2023 17:17:27 -0400
-Subject: [PATCH 1/2] ofproto-dpif-xlate: Always mask ip proto field.
+Subject: [PATCH 1/1] ofproto-dpif-xlate: Always mask ip proto field.
 
-[backport XCP-ng 8.3]
-- unit tests: scripts are quite different from other patched branches,
-  so only the fixes for the existing tests were backported here.
-- manual tests: only manual tests were done. Process was:
-    - Reproducing the issue on 3.0.2 outside of XCP-ng
-    - Ensure the test was not reproduced on 3.1.1
-    - Reproducing the issue on XCP-ng with a 2.5.3
-    - Ensure the issue was not reproduced after this patch
-
-Backported-by: David Morel <david.morel@vates.fr>
-
-[original commit message from branch 2.13]
 The ofproto layer currently treats nw_proto field as overloaded to mean
 both that a proper nw layer exists, as well as the value contained in
 the header for the nw proto.  However, this is incorrect behavior as
@@ -37,13 +25,6 @@ Reported-at: https://bugzilla.redhat.com/show_bug.cgi?id=2134873
 Acked-by: Ilya Maximets <i.maximets@ovn.org>
 Signed-off-by: Aaron Conole <aconole@redhat.com>
 Signed-off-by: Ilya Maximets <i.maximets@ovn.org>
----
- lib/meta-flow.c              | 25 +++++++++++++++++++++++++
- lib/meta-flow.h              |  4 ++++
- ofproto/ofproto-dpif-xlate.c |  8 ++++++++
- tests/ofproto-dpif.at        | 14 +++++++-------
- 4 files changed, 44 insertions(+), 7 deletions(-)
-
 diff --git a/lib/meta-flow.c b/lib/meta-flow.c
 index e30247186..331efd73d 100644
 --- a/lib/meta-flow.c
@@ -91,10 +72,10 @@ index 6c0fdae51..ed5296f76 100644
 +
  #endif /* meta-flow.h */
 diff --git a/ofproto/ofproto-dpif-xlate.c b/ofproto/ofproto-dpif-xlate.c
-index 383f35a94..5bccaa00e 100644
+index ed90bb1c0..85d4b2c08 100644
 --- a/ofproto/ofproto-dpif-xlate.c
 +++ b/ofproto/ofproto-dpif-xlate.c
-@@ -3805,6 +3805,7 @@ compose_dec_ttl(struct xlate_ctx *ctx, struct ofpact_cnt_ids *ids)
+@@ -3803,6 +3803,7 @@ compose_dec_ttl(struct xlate_ctx *ctx, struct ofpact_cnt_ids *ids)
      }
  
      ctx->wc->masks.nw_ttl = 0xff;
@@ -102,7 +83,7 @@ index 383f35a94..5bccaa00e 100644
      if (flow->nw_ttl > 1) {
          flow->nw_ttl--;
          return false;
-@@ -4516,6 +4517,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4514,6 +4515,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
              CHECK_MPLS_RECIRCULATION();
              if (flow->dl_type == htons(ETH_TYPE_IP)) {
                  memset(&wc->masks.nw_src, 0xff, sizeof wc->masks.nw_src);
@@ -110,7 +91,7 @@ index 383f35a94..5bccaa00e 100644
                  flow->nw_src = ofpact_get_SET_IPV4_SRC(a)->ipv4;
              }
              break;
-@@ -4524,6 +4526,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4522,6 +4524,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
              CHECK_MPLS_RECIRCULATION();
              if (flow->dl_type == htons(ETH_TYPE_IP)) {
                  memset(&wc->masks.nw_dst, 0xff, sizeof wc->masks.nw_dst);
@@ -118,7 +99,7 @@ index 383f35a94..5bccaa00e 100644
                  flow->nw_dst = ofpact_get_SET_IPV4_DST(a)->ipv4;
              }
              break;
-@@ -4531,6 +4534,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4529,6 +4532,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
          case OFPACT_SET_IP_DSCP:
              CHECK_MPLS_RECIRCULATION();
              if (is_ip_any(flow)) {
@@ -126,7 +107,7 @@ index 383f35a94..5bccaa00e 100644
                  wc->masks.nw_tos |= IP_DSCP_MASK;
                  flow->nw_tos &= ~IP_DSCP_MASK;
                  flow->nw_tos |= ofpact_get_SET_IP_DSCP(a)->dscp;
-@@ -4540,6 +4544,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4538,6 +4542,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
          case OFPACT_SET_IP_ECN:
              CHECK_MPLS_RECIRCULATION();
              if (is_ip_any(flow)) {
@@ -134,7 +115,7 @@ index 383f35a94..5bccaa00e 100644
                  wc->masks.nw_tos |= IP_ECN_MASK;
                  flow->nw_tos &= ~IP_ECN_MASK;
                  flow->nw_tos |= ofpact_get_SET_IP_ECN(a)->ecn;
-@@ -4549,6 +4554,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4547,6 +4552,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
          case OFPACT_SET_IP_TTL:
              CHECK_MPLS_RECIRCULATION();
              if (is_ip_any(flow)) {
@@ -142,7 +123,7 @@ index 383f35a94..5bccaa00e 100644
                  wc->masks.nw_ttl = 0xff;
                  flow->nw_ttl = ofpact_get_SET_IP_TTL(a)->ttl;
              }
-@@ -4643,6 +4649,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4641,6 +4647,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
               * header field on a packet that does not have them. */
              mf_mask_field_and_prereqs__(mf, &set_field->mask, wc);
              if (mf_are_prereqs_ok(mf, flow)) {
@@ -150,7 +131,7 @@ index 383f35a94..5bccaa00e 100644
                  mf_set_flow_value_masked(mf, &set_field->value,
                                           &set_field->mask, flow);
              }
-@@ -4706,6 +4713,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
+@@ -4704,6 +4711,7 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
          case OFPACT_DEC_TTL:
              CHECK_MPLS_RECIRCULATION();
              wc->masks.nw_ttl = 0xff;
@@ -221,6 +202,3 @@ index 02f292dff..8407826c6 100644
  Datapath actions: dnl
  100,dnl
  set(ipv4(tos=0x4/0xfc)),set(skb_priority(0x1)),1,dnl
--- 
-2.40.1
-
