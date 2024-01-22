@@ -10,16 +10,11 @@ Retrieved from https://github.rackspace.com/O3Eng/xen-networking-scripts/blob/d5
  mode change 100755 => 100644 xenserver/usr_share_openvswitch_scripts_ovs-xapi-sync
 
 diff --git a/xenserver/usr_share_openvswitch_scripts_ovs-xapi-sync b/xenserver/usr_share_openvswitch_scripts_ovs-xapi-sync
-old mode 100755
-new mode 100644
-index bf6cdf849..e66afee91
+index 78c56d27d..a9be1c261 100755
 --- a/xenserver/usr_share_openvswitch_scripts_ovs-xapi-sync
 +++ b/xenserver/usr_share_openvswitch_scripts_ovs-xapi-sync
-@@ -19,9 +19,13 @@
- # Its responsibilities include:
- #
- #   - Set the "bridge-id" key in the Bridge table.
--#   - Set the "iface-id" key in the Interface table.
+@@ -22,6 +22,11 @@
+ #   - Set the "iface-id" key in the Interface table.
  #   - Set the fail-mode on internal bridges.
  
 +
@@ -30,28 +25,25 @@ index bf6cdf849..e66afee91
  import argparse
  import os
  import sys
-@@ -29,9 +33,9 @@ import time
+@@ -29,6 +34,8 @@ import time
  
  import XenAPI
  
 +sys.path.insert(0, '/usr/share/openvswitch/python')
 +
- import ovs.dirs
--from ovs.db import error
--from ovs.db import types
  import ovs.daemon
  import ovs.db.idl
- import ovs.unixctl
-@@ -68,7 +72,7 @@ def init_session():
+ import ovs.dirs
+@@ -66,7 +73,7 @@ def init_session():
  
      try:
          session = XenAPI.xapi_local()
 -        session.xenapi.login_with_password("", "", "", "ovs-xapi-sync")
 +        session.xenapi.login_with_password("", "")
-     except XenAPI.Failure, e:
+     except XenAPI.Failure as e:
          session = None
          vlog.warn("Couldn't login to XAPI (%s)" % e)
-@@ -166,6 +170,33 @@ def get_vm_id(if_name, xs_vm_uuid):
+@@ -164,6 +171,33 @@ def get_vm_id(if_name, xs_vm_uuid):
          return xs_vm_uuid
  
  
@@ -85,7 +77,7 @@ index bf6cdf849..e66afee91
  def set_or_delete(d, key, value):
      if value is None:
          if key in d:
-@@ -185,30 +216,6 @@ def set_external_id(row, key, value):
+@@ -183,30 +217,6 @@ def set_external_id(row, key, value):
          row.external_ids = external_ids
  
  
@@ -116,7 +108,7 @@ index bf6cdf849..e66afee91
  def update_in_band_mgmt(row):
      rec = get_network_by_bridge(row.name)
      if not rec:
-@@ -237,7 +244,7 @@ def main():
+@@ -235,7 +245,7 @@ def main():
  
      ovs.vlog.add_args(parser)
      ovs.daemon.add_args(parser)
@@ -125,7 +117,7 @@ index bf6cdf849..e66afee91
      ovs.vlog.handle_args(args)
      ovs.daemon.handle_args(args)
  
-@@ -264,8 +271,6 @@ def main():
+@@ -262,8 +272,6 @@ def main():
          time.sleep(1)
  
      bridges = {}                # Map from bridge name to nicira-bridge-id
@@ -134,7 +126,7 @@ index bf6cdf849..e66afee91
      seqno = idl.change_seqno    # Sequence number when we last processed the db
      while True:
          unixctl_server.run()
-@@ -288,8 +293,6 @@ def main():
+@@ -286,8 +294,6 @@ def main():
          if flush_cache:
              vlog.info("Flushing cache as the result of unixctl.")
              bridges = {}
@@ -143,10 +135,10 @@ index bf6cdf849..e66afee91
              flush_cache = False
          seqno = idl.change_seqno
  
-@@ -297,96 +300,40 @@ def main():
+@@ -295,96 +301,42 @@ def main():
  
          new_bridges = {}
-         for row in idl.tables["Bridge"].rows.itervalues():
+         for row in idl.tables["Bridge"].rows.values():
 -            bridge_id = bridges.get(row.name)
 -            if bridge_id is None:
 -                # Configure the new bridge.
@@ -182,22 +174,22 @@ index bf6cdf849..e66afee91
 +                    bridge_id_cache = bridge_id
  
              if bridge_id is not None:
--                new_bridges[row.name] = bridge_id
+                 new_bridges[row.name] = bridge_id
 +                set_external_id(row, "bridge-id", bridge_id.split(";")[0])
 +
 +            new_bridges[row.name] = bridge_id_cache
 +
          bridges = new_bridges
  
--        iface_by_name = {}
-         for row in idl.tables["Interface"].rows.itervalues():
+         iface_by_name = {}
+         for row in idl.tables["Interface"].rows.values():
 -            iface_by_name[row.name] = row
 +            if not row.name.startswith("vif"):
 +                continue
  
 -        new_iface_ids = {}
 -        new_vm_ids = {}
--        for row in idl.tables["Interface"].rows.itervalues():
+-        for row in idl.tables["Interface"].rows.values():
 -            # Match up paired vif and tap devices.
 -            if row.name.startswith("vif"):
 -                vif = row
@@ -267,4 +259,5 @@ index bf6cdf849..e66afee91
          txn.add_comment("ovs-xapi-sync: Updating records from XAPI")
          txn.commit_block()
 -- 
-2.17.2 (Apple Git-113)
+2.34.1
+
