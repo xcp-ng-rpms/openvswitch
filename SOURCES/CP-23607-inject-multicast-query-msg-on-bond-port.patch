@@ -1,59 +1,72 @@
+From bf98afd319ef6ff31bac617bd1fe879cef558e45 Mon Sep 17 00:00:00 2001
+From: Chunjie Zhu <chunjie.zhu@cloud.com>
+Date: Wed, 23 Aug 2023 06:20:00 +0000
+Subject: [PATCH] CP-23607: inject multicast query msg on bond port
+
+---
+ lib/packets.c          | 40 +++++++++++++++++++++
+ lib/packets.h          |  1 +
+ ofproto/bond.c         | 12 +++++--
+ ofproto/bond.h         |  6 ++--
+ ofproto/ofproto-dpif.c | 81 +++++++++++++++++++++++++++++++++++++++++-
+ 5 files changed, 134 insertions(+), 6 deletions(-)
+
 diff --git a/lib/packets.c b/lib/packets.c
-index cc04869..c3f49b4 100644
+index 1dcd4a6fc..8b9e6f5ac 100644
 --- a/lib/packets.c
 +++ b/lib/packets.c
-@@ -151,6 +151,46 @@ eth_addr_from_string(const char *s, struct eth_addr *ea)
+@@ -192,6 +192,46 @@ eth_addr_from_string(const char *s, struct eth_addr *ea)
      }
  }
  
-+void
-+compose_igmp_query_packet(struct dp_packet *packet)
-+{
-+    struct eth_header *eth;
-+    struct ip_header *nh;
-+    struct igmp_header *igmp;
-+    static const struct eth_addr dst_mac = {{{0x01, 0x00, 0x5e, 0x00, 0x00, 0x01}}};
++ void
++ compose_igmp_query_packet(struct dp_packet *packet)
++ {
++     struct eth_header *eth;
++     struct ip_header *nh;
++     struct igmp_header *igmp;
++     static const struct eth_addr dst_mac = {{{0x01, 0x00, 0x5e, 0x00, 0x00, 0x01}}};
 +
-+    dp_packet_prealloc_tailroom(packet, 2 + ETH_HEADER_LEN + IP_HEADER_LEN + IGMP_HEADER_LEN);
++     dp_packet_prealloc_tailroom(packet, 2 + ETH_HEADER_LEN + IP_HEADER_LEN + IGMP_HEADER_LEN);
 +
-+    eth = dp_packet_put_uninit(packet, ETH_HEADER_LEN);
-+    eth->eth_dst = dst_mac;
-+    eth->eth_src = eth_addr_zero;
-+    eth->eth_type = htons(ETH_TYPE_IP);
++     eth = dp_packet_put_uninit(packet, ETH_HEADER_LEN);
++     eth->eth_dst = dst_mac;
++     eth->eth_src = eth_addr_zero;
++     eth->eth_type = htons(ETH_TYPE_IP);
 +
-+    nh = dp_packet_put_uninit(packet, IP_HEADER_LEN);
-+    nh->ip_ihl_ver = IP_IHL_VER(5, 4);
-+    nh->ip_tos = 0;
-+    nh->ip_tot_len = htons(IP_HEADER_LEN + IGMP_HEADER_LEN);
-+    nh->ip_id = htons(0);
-+    nh->ip_frag_off = htons(0);
-+    nh->ip_ttl = 0;
-+    nh->ip_proto = IPPROTO_IGMP;
-+    nh->ip_csum = htonl(0);
-+    put_16aligned_be32(&(nh->ip_src), htonl(0));
-+    put_16aligned_be32(&(nh->ip_dst), htonl(0xE0000001)); // 224.0.0.1
-+    nh->ip_csum = csum(nh, IP_HEADER_LEN);
++     nh = dp_packet_put_uninit(packet, IP_HEADER_LEN);
++     nh->ip_ihl_ver = IP_IHL_VER(5, 4);
++     nh->ip_tos = 0;
++     nh->ip_tot_len = htons(IP_HEADER_LEN + IGMP_HEADER_LEN);
++     nh->ip_id = htons(0);
++     nh->ip_frag_off = htons(0);
++     nh->ip_ttl = 0;
++     nh->ip_proto = IPPROTO_IGMP;
++     nh->ip_csum = htonl(0);
++     put_16aligned_be32(&(nh->ip_src), htonl(0));
++     put_16aligned_be32(&(nh->ip_dst), htonl(0xE0000001)); // 224.0.0.1
++     nh->ip_csum = csum(nh, IP_HEADER_LEN);
 +
-+    igmp = dp_packet_put_uninit(packet, IGMP_HEADER_LEN);
-+    igmp->igmp_type = IGMP_HOST_MEMBERSHIP_QUERY;
-+    igmp->igmp_code = 10;
-+    igmp->igmp_csum = htons(0);
-+    put_16aligned_be32(&igmp->group, 0);
-+    igmp->igmp_csum = csum(igmp, IGMP_HEADER_LEN);
++     igmp = dp_packet_put_uninit(packet, IGMP_HEADER_LEN);
++     igmp->igmp_type = IGMP_HOST_MEMBERSHIP_QUERY;
++     igmp->igmp_code = 10;
++     igmp->igmp_csum = htons(0);
++     put_16aligned_be32(&igmp->group, 0);
++     igmp->igmp_csum = csum(igmp, IGMP_HEADER_LEN);
 +
-+    dp_packet_reset_offsets(packet);
-+    dp_packet_set_l3(packet, nh);
-+    dp_packet_set_l4(packet, igmp);
-+}
++     dp_packet_reset_offsets(packet);
++     dp_packet_set_l3(packet, nh);
++     dp_packet_set_l4(packet, igmp);
++ }
 +
  /* Fills 'b' with a Reverse ARP packet with Ethernet source address 'eth_src'.
   * This function is used by Open vSwitch to compose packets in cases where
   * context is important but content doesn't (or shouldn't) matter.
 diff --git a/lib/packets.h b/lib/packets.h
-index 84daca1..8fc636e 100644
+index 5bdf6e4bb..974e1c849 100644
 --- a/lib/packets.h
 +++ b/lib/packets.h
-@@ -306,6 +306,7 @@ static inline uint32_t hash_mac(const struct eth_addr ea,
+@@ -337,6 +337,7 @@ static inline uint32_t hash_mac(const struct eth_addr ea,
  bool eth_addr_is_reserved(const struct eth_addr);
  bool eth_addr_from_string(const char *, struct eth_addr *);
  
@@ -62,10 +75,10 @@ index 84daca1..8fc636e 100644
  
  void eth_push_vlan(struct dp_packet *, ovs_be16 tpid, ovs_be16 tci);
 diff --git a/ofproto/bond.c b/ofproto/bond.c
-index 8a37aad..2f25b70 100644
+index a7c859b90..e64372fd6 100644
 --- a/ofproto/bond.c
 +++ b/ofproto/bond.c
-@@ -627,7 +627,7 @@ bond_slave_set_may_enable(struct bond *bond, void *slave_, bool may_enable)
+@@ -696,7 +696,7 @@ bond_member_set_may_enable(struct bond *bond, void *member_, bool may_enable)
   *
   * Returns true if the caller should revalidate its flows.
   *
@@ -74,14 +87,14 @@ index 8a37aad..2f25b70 100644
  bool
  bond_run(struct bond *bond, enum lacp_status lacp_status)
  {
-@@ -699,13 +699,19 @@ may_send_learning_packets(const struct bond *bond)
+@@ -789,13 +789,19 @@ may_send_learning_packets(const struct bond *bond)
   * is located.  For each MAC that has been learned on a port other than 'bond',
   * it should call bond_compose_learning_packet().
   *
 + * Multicast on bond reuses same logic of MAC learning.
-+ * If this function returns true, then the client should iterate its IGMP 
++ * If this function returns true, then the client should iterate its IGMP
 + * snooping table for the ports listening on some multicast group(s). For each
-+ * port, client should inject IGMPv2 query packet on the port to make the 
++ * port, client should inject IGMPv2 query packet on the port to make the
 + * multicast receiver response IGMP report message.
 + *
   * This function will only return true if 'bond' is in SLB or active-backup
@@ -95,7 +108,7 @@ index 8a37aad..2f25b70 100644
  {
      bool send;
  
-@@ -718,7 +724,7 @@ bond_should_send_learning_packets(struct bond *bond)
+@@ -808,7 +814,7 @@ bond_should_send_learning_packets(struct bond *bond)
  
  /* Sends a gratuitous learning packet on 'bond' from 'eth_src' on 'vlan'.
   *
@@ -105,16 +118,16 @@ index 8a37aad..2f25b70 100644
   * port_aux and takes ownership of the returned ofpbuf. */
  struct dp_packet *
 diff --git a/ofproto/bond.h b/ofproto/bond.h
-index 9a5ea9e..9040b73 100644
+index e7f7ea7a9..653b4a29a 100644
 --- a/ofproto/bond.h
 +++ b/ofproto/bond.h
-@@ -79,8 +79,10 @@ void bond_wait(struct bond *);
+@@ -84,8 +84,10 @@ void bond_wait(struct bond *);
  
- void bond_slave_set_may_enable(struct bond *, void *slave_, bool may_enable);
+ void bond_member_set_may_enable(struct bond *, void *member_, bool may_enable);
  
 -/* Special MAC learning support for SLB bonding. */
 -bool bond_should_send_learning_packets(struct bond *);
-+/* Special MAC learning support for SLB bonding. 
++/* Special MAC learning support for SLB bonding.
 + * Inject IGMPv2 query.
 + * */
 +bool bond_should_send_remedy_packets(struct bond *);
@@ -122,10 +135,10 @@ index 9a5ea9e..9040b73 100644
                                                 const struct eth_addr eth_src,
                                                 uint16_t vlan, void **port_aux);
 diff --git a/ofproto/ofproto-dpif.c b/ofproto/ofproto-dpif.c
-index 0c14154..07e1267 100644
+index 681585005..e2732b1d2 100644
 --- a/ofproto/ofproto-dpif.c
 +++ b/ofproto/ofproto-dpif.c
-@@ -3120,6 +3120,8 @@ bundle_send_learning_packets(struct ofbundle *bundle)
+@@ -3602,6 +3602,8 @@ bundle_send_learning_packets(struct ofbundle *bundle)
      }
  }
  
@@ -134,7 +147,7 @@ index 0c14154..07e1267 100644
  static void
  bundle_run(struct ofbundle *bundle)
  {
-@@ -3137,7 +3139,8 @@ bundle_run(struct ofbundle *bundle)
+@@ -3619,7 +3621,8 @@ bundle_run(struct ofbundle *bundle)
              bundle->ofproto->backer->need_revalidate = REV_BOND;
          }
  
@@ -144,7 +157,7 @@ index 0c14154..07e1267 100644
              bundle_send_learning_packets(bundle);
          }
      }
-@@ -4648,6 +4651,81 @@ ofproto_unixctl_mcast_snooping_show(struct unixctl_conn *conn,
+@@ -6142,6 +6145,82 @@ ofproto_unixctl_mcast_snooping_show(struct unixctl_conn *conn,
      ds_destroy(&ds);
  }
  
@@ -177,7 +190,8 @@ index 0c14154..07e1267 100644
 +            LIST_FOR_EACH(bundle_in_grp, bundle_node, &grp->bundle_lru) {
 +                    char name[OFP_MAX_PORT_NAME_LEN];
 +                    port_in_ms = ofbundle_get_a_port(bundle_in_grp->port);
-+                    ofputil_port_to_string(port_in_ms->up.ofp_port, name, sizeof name);
++                    ofputil_port_to_string(port_in_ms->up.ofp_port,
++                                           NULL, name, sizeof name);
 +                    if (NULL == shash_find_data(&all_bundles, name)) {
 +                        port_node = xmalloc(sizeof *port_node);
 +                        port_node->port = port_in_ms;
@@ -200,7 +214,7 @@ index 0c14154..07e1267 100644
 +    error = n_packets = n_errors = 0;
 +    SHASH_FOR_EACH(sending_port, &all_bundles) {
 +        port_node = sending_port->data;
-+        ret = ofproto_dpif_send_packet(port_node->port, packet);
++        ret = ofproto_dpif_send_packet(port_node->port, false, packet);
 +        free(port_node);
 +        sending_port->data = NULL;
 +        if (ret) {
@@ -213,8 +227,8 @@ index 0c14154..07e1267 100644
 +    shash_destroy(&all_bundles);
 +
 +    if (n_errors) {
-+        static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(1, 5);
-+        VLOG_WARN_RL(&rl, "bond %s: %d errors sending %d IGMP query "
++        static struct vlog_rate_limit rll = VLOG_RATE_LIMIT_INIT(1, 5);
++        VLOG_WARN_RL(&rll, "bond %s: %d errors sending %d IGMP query "
 +                     "packets, last error was: %s",
 +                     bundle->name, n_errors, n_packets, ovs_strerror(error));
 +    } else {
@@ -223,6 +237,9 @@ index 0c14154..07e1267 100644
 +    }
 +}
 +
- struct trace_ctx {
-     struct xlate_out xout;
-     struct xlate_in xin;
+ /* Store the current ofprotos in 'ofproto_shash'.  Returns a sorted list
+  * of the 'ofproto_shash' nodes.  It is the responsibility of the caller
+  * to destroy 'ofproto_shash' and free the returned value. */
+-- 
+2.34.1
+

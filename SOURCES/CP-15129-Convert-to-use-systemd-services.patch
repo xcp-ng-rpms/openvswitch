@@ -1,15 +1,15 @@
-From 8fb211a8c9f310eb26e7b6a0ff5537726e3068af Mon Sep 17 00:00:00 2001
-From: Ross Lagerwall <ross.lagerwall@citrix.com>
-Date: Thu, 14 Jan 2016 15:06:33 +0000
+From ca773d86a83b65ac67793c14e8ec2ee7e773f37a Mon Sep 17 00:00:00 2001
+From: Chunjie Zhu <chunjie.zhu@cloud.com>
+Date: Tue, 22 Aug 2023 03:54:21 +0000
 Subject: [PATCH] CP-15129: Convert to use systemd services
 
 diff --git a/xenserver/automake.mk b/xenserver/automake.mk
-index 816b1b5..0efa739 100644
+index ead0f4a7c..4a132fb1e 100644
 --- a/xenserver/automake.mk
 +++ b/xenserver/automake.mk
 @@ -10,8 +10,6 @@ EXTRA_DIST += \
  	xenserver/LICENSE \
- 	xenserver/README \
+ 	xenserver/README.rst \
  	xenserver/automake.mk \
 -	xenserver/etc_init.d_openvswitch \
 -	xenserver/etc_init.d_openvswitch-xapi-update \
@@ -29,7 +29,7 @@ index 816b1b5..0efa739 100644
  
 diff --git a/xenserver/etc_init.d_openvswitch b/xenserver/etc_init.d_openvswitch
 deleted file mode 100755
-index 9c0fe80..0000000
+index 7d2103fa2..000000000
 --- a/xenserver/etc_init.d_openvswitch
 +++ /dev/null
 @@ -1,154 +0,0 @@
@@ -80,9 +80,9 @@ index 9c0fe80..0000000
 -
 -start_ovs_xapi_sync () {
 -    if daemon_is_running ovs-xapi-sync; then
--	log_success_msg "ovs-xapi-sync is already running"
+-        log_success_msg "ovs-xapi-sync is already running"
 -    else
--	PYTHONPATH=/usr/share/openvswitch/python \
+-        PYTHONPATH=/usr/share/openvswitch/python \
 -            /usr/share/openvswitch/scripts/ovs-xapi-sync \
 -            --log-file --pidfile --detach --monitor unix:/var/run/openvswitch/db.sock
 -    fi
@@ -96,16 +96,16 @@ index 9c0fe80..0000000
 -    set "$@" --external-id=xs-system-uuid="$INSTALLATION_UUID"
 -    set "$@" --daemon-cwd=/var/xen/openvswitch
 -    if test X"$FORCE_COREFILES" != X; then
--	set "$@" --force-corefiles="$FORCE_COREFILES"
+-        set "$@" --force-corefiles="$FORCE_COREFILES"
 -    fi
 -    if test X"$OVSDB_SERVER_PRIORITY" != X; then
--	set "$@" --ovsdb-server-priority="$OVSDB_SERVER_PRIORITY"
+-        set "$@" --ovsdb-server-priority="$OVSDB_SERVER_PRIORITY"
 -    fi
 -    if test X"$VSWITCHD_PRIORITY" != X; then
--	set "$@" --ovs-vswitchd-priority="$VSWITCHD_PRIORITY"
+-        set "$@" --ovs-vswitchd-priority="$VSWITCHD_PRIORITY"
 -    fi
 -    if test X"$VSWITCHD_MLOCKALL" != X; then
--	set "$@" --mlockall="$VSWITCHD_MLOCKALL"
+-        set "$@" --mlockall="$VSWITCHD_MLOCKALL"
 -    fi
 -    if test ! -e /var/run/openvswitch.booted; then
 -        touch /var/run/openvswitch.booted
@@ -127,9 +127,9 @@ index 9c0fe80..0000000
 -    # Restart the high-availability daemon if it is running.  Otherwise
 -    # it loses its heartbeat and reboots the system after a few minutes.
 -    if pidof xhad >/dev/null && test -e /etc/xensource/xhad.conf; then
--	PATH=$PATH:/opt/xensource/xha
--	action "Stopping HA daemon" ha_stop_daemon
--	action "Starting HA daemon" ha_start_daemon
+-        PATH=$PATH:/opt/xensource/xha
+-        action "Stopping HA daemon" ha_stop_daemon
+-        action "Starting HA daemon" ha_start_daemon
 -    fi
 -
 -    action "Stopping ovs-xapi-sync" stop_daemon ovs-xapi-sync
@@ -189,7 +189,7 @@ index 9c0fe80..0000000
 -esac
 diff --git a/xenserver/etc_init.d_openvswitch-xapi-update b/xenserver/etc_init.d_openvswitch-xapi-update
 deleted file mode 100755
-index 12a9db2..0000000
+index 12a9db2a1..000000000
 --- a/xenserver/etc_init.d_openvswitch-xapi-update
 +++ /dev/null
 @@ -1,80 +0,0 @@
@@ -275,7 +275,7 @@ index 12a9db2..0000000
 -esac
 diff --git a/xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service b/xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service
 new file mode 100644
-index 0000000..f0dc685
+index 000000000..f0dc6851a
 --- /dev/null
 +++ b/xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service
 @@ -0,0 +1,13 @@
@@ -294,7 +294,7 @@ index 0000000..f0dc685
 +WantedBy=multi-user.target
 diff --git a/xenserver/usr_lib_systemd_system_openvswitch.service b/xenserver/usr_lib_systemd_system_openvswitch.service
 new file mode 100644
-index 0000000..31f18ef
+index 000000000..31f18ef3c
 --- /dev/null
 +++ b/xenserver/usr_lib_systemd_system_openvswitch.service
 @@ -0,0 +1,15 @@
@@ -314,7 +314,7 @@ index 0000000..31f18ef
 +[Install]
 +WantedBy=multi-user.target
 diff --git a/xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py b/xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py
-index fdbbc0e..0b3ca9d 100644
+index 8946917d5..0bdcd63c9 100644
 --- a/xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py
 +++ b/xenserver/usr_lib_xsconsole_plugins-base_XSFeatureVSwitch.py
 @@ -21,6 +21,7 @@ import socket
@@ -331,7 +331,7 @@ index fdbbc0e..0b3ca9d 100644
          try:
 -            output = ShellPipe(["service", self.name, "version"]).Stdout()
 +            output = ShellPipe([self.processname, "-V"]).Stdout()
-         except StandardError, e:
+         except StandardError as e:
              XSLogError("vswitch version retrieval error: " + str(e))
              return "<unknown>"
 @@ -49,7 +50,7 @@ class VSwitchService:
@@ -340,12 +340,12 @@ index fdbbc0e..0b3ca9d 100644
          try:
 -            output = ShellPipe(["service", self.name, "status"]).Stdout()
 +            output = ShellPipe([ovsctl, "status"]).Stdout()
-         except StandardError, e:
+         except StandardError as e:
              XSLogError("vswitch status retrieval error: " + str(e))
              return "<unknown>"
 diff --git a/xenserver/usr_share_openvswitch_scripts_ovs-start b/xenserver/usr_share_openvswitch_scripts_ovs-start
-new file mode 100755
-index 0000000..93a71dd
+new file mode 100644
+index 000000000..93a71ddbc
 --- /dev/null
 +++ b/xenserver/usr_share_openvswitch_scripts_ovs-start
 @@ -0,0 +1,33 @@
@@ -382,3 +382,6 @@ index 0000000..93a71dd
 +"$@"
 +
 +ovs_ctl --protocol=gre enable-protocol
+-- 
+2.34.1
+
