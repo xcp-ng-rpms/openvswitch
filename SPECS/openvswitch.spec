@@ -34,6 +34,10 @@ Patch12: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
 Patch13: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 Patch14: mlockall-onfault.patch
 Patch15: hide-logrotate-script-error.patch
+
+# XCP-ng patches
+Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
+
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -131,7 +135,8 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch.service \
          %{buildroot}/%{_unitdir}/openvswitch.service
 install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
          %{buildroot}/%{_unitdir}/openvswitch-xapi-sync.service
-
+install -m 644 rhel/usr_lib_systemd_system_openvswitch-ipsec.service \
+         %{buildroot}/%{_unitdir}/openvswitch-ipsec.service
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/__pycache__
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/compat/__pycache__
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/__pycache__
@@ -145,10 +150,6 @@ install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/unixctl/__pyca
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
 
 %{?_cov_install}
-
-# XCP-ng: ipsec
-install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
-install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %check
 make check
@@ -269,7 +270,6 @@ make check
 %{_mandir}/man8/ovs-vsctl.8.gz
 %{_mandir}/man8/ovs-vswitchd.8.gz
 %{_mandir}/man8/ovs-bugtool.8.gz
-
 %{_unitdir}/openvswitch.service
 %{_unitdir}/openvswitch-xapi-sync.service
 
@@ -336,7 +336,6 @@ tunnels using IPsec.
 
 %files ipsec
 %{_unitdir}/openvswitch-ipsec.service
-%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %post ipsec
 %systemd_post openvswitch-ipsec.service
@@ -348,8 +347,13 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
-- CP-44181: upgrade to OVS LTS 2.17.7
+* Thu Jan 25 2024 Benjamin Reis <benjamin.reis@vates.tech> - 2.17.7-1.1
+- Update to 2.17.7-1
+- Add openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
+- Get ipsec script and service from new sources
+- *** Upstream changelog ***
+- * Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
+- - CP-44181: upgrade to OVS LTS 2.17.7
 
 * Fri Sep 15 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.14.1
 - Update to 2.5.3-2.3.14
