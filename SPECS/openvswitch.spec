@@ -18,11 +18,6 @@ Version: 2.17.7
 License: ASL 2.0 and GPLv2
 Release: %{?xsrel}.1%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
-
-# XCP-ng additional sources
-Source1: openvswitch-ipsec.service
-Source2: ovs-monitor-ipsec
-
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
 Patch2: CA-78639-dont-call-interface-reconfigure-anymore.patch
@@ -41,7 +36,7 @@ Patch14: mlockall-onfault.patch
 Patch15: hide-logrotate-script-error.patch
 
 # XCP-ng patches
-Patch1000: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
+Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -140,6 +135,8 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch.service \
          %{buildroot}/%{_unitdir}/openvswitch.service
 install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
          %{buildroot}/%{_unitdir}/openvswitch-xapi-sync.service
+install -m 644 rhel/usr_lib_systemd_system_openvswitch-ipsec.service \
+         %{buildroot}/%{_unitdir}/openvswitch-ipsec.service
 
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/__pycache__
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/compat/__pycache__
@@ -154,10 +151,6 @@ install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/unixctl/__pyca
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
 
 %{?_cov_install}
-
-# XCP-ng: ipsec
-install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
-install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %check
 make check
@@ -345,7 +338,6 @@ tunnels using IPsec.
 
 %files ipsec
 %{_unitdir}/openvswitch-ipsec.service
-%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %post ipsec
 %systemd_post openvswitch-ipsec.service
@@ -359,6 +351,8 @@ tunnels using IPsec.
 %changelog
 * Mon Jan 22 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-1.1
 - Update to 2.17.7-1
+- Add openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch (Benjamin Reis)
+- Get ipsec script and service from new sources (Benjamin Reis)
 - *** Upstream changelog ***
 - * Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
 - - CP-44181: upgrade to OVS LTS 2.17.7
