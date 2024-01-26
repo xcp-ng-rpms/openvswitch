@@ -1,8 +1,9 @@
-%global package_speccommit 30a3871f95256dbd35480d24029207bbbc8a6c52
-%global usver 2.5.3
-%global xsver 2.3.14
+%global package_speccommit 4700026553159f8d45bd51a503938b6f2d9cf3a4
+%global usver 2.17.7
+%global xsver 1
 %global xsrel %{xsver}%{?xscount}%{?xshash}
-%global package_srccommit refs/tags/v2.5.3
+%global package_srccommit refs/tags/v2.17.7
+%global __python %{_bindir}/python3
 
 # Control whether we build with the address sanitizer.
 # Default enabled: (to override: --without asan)
@@ -13,60 +14,36 @@
 Name: openvswitch
 Summary: Virtual switch
 URL: http://www.openvswitch.org/
-Version: 2.5.3
+Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.2%{?dist}
-Source0: openvswitch-2.5.3.tar.gz
-
-# XCP-ng additional sources
-Source1: openvswitch-ipsec.service
-Source2: ovs-monitor-ipsec
-
-Patch0: 0001-vswitchd-Introduce-mtu_request-column-in-Interface.patch
-Patch1: 0002-bridge-Honor-mtu_request-when-port-is-added.patch
-Patch2: 0003-ofproto-Honor-mtu_request-even-for-internal-ports.patch
-Patch3: 0001-mcast-snooping-Flush-ports-mdb-when-VLAN-configurati.patch
-Patch4: 0002-mcast-snooping-Avoid-segfault-for-vswitchd.patch
-Patch5: 0001-lacp-enable-bond-slave-immediately-after-lacp-attach.patch
-Patch6: 0001-mirror-Allow-concurrent-lookups.patch
-Patch7: 0001-ofproto-Fix-wrong-datapath-flow-with-same-in_port-an.patch
-Patch8: 0001-bond-send-learning-pkg-when-non-active-slave-failed.patch
-Patch9: 0002-LACP-Check-active-partner-sys-id.patch
-Patch10: 0001-configure-Check-for-more-specific-function-to-pull-i.patch
-Patch11: 0001-flow-Support-extra-padding-length.patch
-Patch12: 0001-bond-Honor-updelay-and-downdelay-when-LACP-is-in-use.patch
-Patch13: 0001-bond-Fix-LACP-fallback-to-active-backup-when-recirc-.patch
-Patch14: 0001-bond-Remove-executable-bit-from-bond.c.patch
-Patch15: 0001-lacp-Avoid-packet-drop-on-LACP-bond-after-link-up.patch
-Patch16: 0001-lacp-report-desync-in-ovs-threads-enabling-slave.patch
-Patch17: 0001-ofproto-bond-Improve-admissibility-debug-readability.patch
-Patch18: 0001-ofproto-dpif-xlate-Always-mask-ip-proto-field.patch
-Patch19: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch20: CP-15129-Convert-to-use-systemd-services.patch
-Patch21: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch22: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch23: CA-153718-md5-verification-dvsc.patch
-Patch24: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch25: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch26: use-old-db-port-6632-for-dvsc.patch
-Patch27: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch28: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch29: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch30: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch31: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch32: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch33: CP-23607-inject-multicast-query-msg-on-bond-port.patch
-Patch34: mlockall-onfault.patch
-Patch35: hide-logrotate-script-error.patch
+Release: %{?xsrel}.1%{?dist}
+Source0: openvswitch-2.17.7.tar.gz
+Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch1: CP-15129-Convert-to-use-systemd-services.patch
+Patch2: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch3: CA-153718-md5-verification-dvsc.patch
+Patch4: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch5: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch6: use-old-db-port-6632-for-dvsc.patch
+Patch7: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch8: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch9: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch10: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch11: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch12: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch13: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch14: mlockall-onfault.patch
+Patch15: hide-logrotate-script-error.patch
 
 # XCP-ng patches
-Patch1000: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
+Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
+Patch1001: openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
 
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-BuildRequires: openssl, openssl-devel, python
+BuildRequires: openssl, openssl-devel, python3
 BuildRequires: autoconf, automake, libtool
 %if %{with_asan}
 BuildRequires: libasan
@@ -159,6 +136,14 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch.service \
          %{buildroot}/%{_unitdir}/openvswitch.service
 install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
          %{buildroot}/%{_unitdir}/openvswitch-xapi-sync.service
+install -m 644 rhel/usr_lib_systemd_system_openvswitch-ipsec.service \
+         %{buildroot}/%{_unitdir}/openvswitch-ipsec.service
+
+install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/__pycache__
+install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/compat/__pycache__
+install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/__pycache__
+install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/db/__pycache__
+install -d -m 755 %{buildroot}/%{_datadir}/openvswitch/python/ovs/unixctl/__pycache__
 
 #install python/compat/uuid.py %{buildroot}/%{_datadir}/openvswitch/python
 #install python/compat/argparse.py %{buildroot}/%{_datadir}/openvswitch/python
@@ -167,10 +152,6 @@ install -m 644 xenserver/usr_lib_systemd_system_openvswitch-xapi-sync.service \
 (cd "$RPM_BUILD_ROOT" && rm -f usr/lib64/lib*)
 
 %{?_cov_install}
-
-# XCP-ng: ipsec
-install -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/openvswitch-ipsec.service
-install -m 755 %{SOURCE2} %{buildroot}%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %check
 make check
@@ -193,7 +174,6 @@ make check
 %config %{_sysconfdir}/logrotate.d/openvswitch
 %{_sysconfdir}/xapi.d/plugins/openvswitch-cfg-update
 %dir %{_sysconfdir}/openvswitch
-%dir /run/openvswitch
 %dir %{_var}/xen/openvswitch
 %dir %{_var}/lib/openvswitch
 %dir %{_var}/log/openvswitch
@@ -201,13 +181,13 @@ make check
 %{_sysconfdir}/bash_completion.d/ovs-vsctl-bashcomp.bash
 %{_bindir}/ovs-docker
 %{_bindir}/ovs-testcontroller
-%{_bindir}/ovs-benchmark
 %{_bindir}/ovs-appctl
 %{_bindir}/ovs-dpctl
 %{_bindir}/ovs-dpctl-top
 %{_bindir}/ovs-l3ping
 %{_bindir}/ovs-ofctl
 %{_bindir}/ovs-pcap
+%{_bindir}/ovs-tcpdump
 %{_bindir}/ovs-tcpundump
 %{_bindir}/ovs-vlan-test
 %{_bindir}/ovs-vsctl
@@ -215,15 +195,20 @@ make check
 %{_bindir}/ovsdb-tool
 %{_bindir}/ovs-test
 %{_sbindir}/ovs-bugtool
-%{_sbindir}/ovs-vlan-bug-workaround
 %{_sbindir}/ovs-vswitchd
 %{_sbindir}/ovsdb-server
+%{_datadir}/openvswitch/local-config.ovsschema
 %{_datadir}/openvswitch/bugtool-plugins/kernel-info/openvswitch.xml
 %{_datadir}/openvswitch/bugtool-plugins/network-status/openvswitch.xml
 %{_datadir}/openvswitch/bugtool-plugins/system-configuration.xml
 %{_datadir}/openvswitch/bugtool-plugins/system-configuration/openvswitch.xml
 %{_datadir}/openvswitch/bugtool-plugins/system-logs/openvswitch.xml
 %{_datadir}/openvswitch/python/ovs/__init__.py*
+%{_datadir}/openvswitch/python/ovs/compat/__init__.py*
+%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/__init__.py*
+%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/sorteddict.py*
+%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/sortedlist.py*
+%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/sortedset.py*
 %{_datadir}/openvswitch/python/ovs/daemon.py*
 %{_datadir}/openvswitch/python/ovs/db/__init__.py*
 %{_datadir}/openvswitch/python/ovs/db/data.py*
@@ -232,6 +217,8 @@ make check
 %{_datadir}/openvswitch/python/ovs/db/parser.py*
 %{_datadir}/openvswitch/python/ovs/db/schema.py*
 %{_datadir}/openvswitch/python/ovs/db/types.py*
+%{_datadir}/openvswitch/python/ovs/db/custom_index.py*
+%{_datadir}/openvswitch/python/ovs/fcntl_win.py*
 %{_datadir}/openvswitch/python/ovs/unixctl/__init__.py*
 %{_datadir}/openvswitch/python/ovs/unixctl/client.py*
 %{_datadir}/openvswitch/python/ovs/unixctl/server.py*
@@ -249,6 +236,12 @@ make check
 %{_datadir}/openvswitch/python/ovs/util.py*
 %{_datadir}/openvswitch/python/ovs/vlog.py*
 %{_datadir}/openvswitch/python/ovs/version.py*
+%{_datadir}/openvswitch/python/ovs/winutils.py
+%{_datadir}/openvswitch/python/ovs/__pycache__
+%{_datadir}/openvswitch/python/ovs/compat/__pycache__
+%{_datadir}/openvswitch/python/ovs/compat/sortedcontainers/__pycache__
+%{_datadir}/openvswitch/python/ovs/db/__pycache__
+%{_datadir}/openvswitch/python/ovs/unixctl/__pycache__
 #%%{_datadir}/openvswitch/python/argparse.py*
 #%%{_datadir}/openvswitch/python/uuid.py*
 %{_datadir}/openvswitch/vswitch.ovsschema
@@ -256,26 +249,30 @@ make check
 %{_datadir}/openvswitch/scripts/ovs-bugtool-*
 %{_datadir}/openvswitch/scripts/ovs-check-dead-ifs
 %{_datadir}/openvswitch/scripts/ovs-ctl
+%{_datadir}/openvswitch/scripts/ovs-kmod-ctl
+%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 %{_datadir}/openvswitch/scripts/ovs-save
 %{_datadir}/openvswitch/scripts/ovs-start
 %{_datadir}/openvswitch/scripts/ovs-xapi-sync
 %{_mandir}/man1/ovsdb-client.1.gz
 %{_mandir}/man1/ovsdb-tool.1.gz
 %{_mandir}/man1/ovsdb-server.1.gz
+%{_mandir}/man1/ovs-pcap.1.gz
+#%%{_mandir}/man1/ovs-tcpundump.1.gz
+%{_mandir}/man5/ovsdb.local-config.5.gz
+%{_mandir}/man5/ovsdb-server.5.gz
 %{_mandir}/man5/ovs-vswitchd.conf.db.5.gz
-%{_mandir}/man8/ovs-appctl.8.gz
+%{_mandir}/man5/vtep.5.gz
+%{_mandir}/man7/ovs-fields.7.gz
+%{_mandir}/man8/vtep-ctl.8.gz
 %{_mandir}/man8/ovs-dpctl.8.gz
 %{_mandir}/man8/ovs-dpctl-top.8.gz
 %{_mandir}/man8/ovs-ofctl.8.gz
-%{_mandir}/man1/ovs-pcap.1.gz
-%{_mandir}/man1/ovs-tcpundump.1.gz
-%{_mandir}/man8/ovs-vlan-bug-workaround.8.gz
-%{_mandir}/man8/ovs-vlan-test.8.gz
+%{_mandir}/man8/ovs-kmod-ctl.8.gz
 %{_mandir}/man8/ovs-vsctl.8.gz
 %{_mandir}/man8/ovs-vswitchd.8.gz
-%{_mandir}/man1/ovs-benchmark.1.gz
 %{_mandir}/man8/ovs-bugtool.8.gz
-%{_mandir}/man8/ovs-ctl.8.gz
+
 %{_unitdir}/openvswitch.service
 %{_unitdir}/openvswitch-xapi-sync.service
 
@@ -286,35 +283,12 @@ make check
 %exclude /usr/lib64/pkgconfig/libovsdb.pc
 %exclude /usr/lib64/pkgconfig/libsflow.pc
 %exclude /usr/share/man/man8/ovs-testcontroller.8.gz
-%exclude /usr/share/openvswitch/ovn-nb.ovsschema
-%exclude /usr/share/openvswitch/ovn-sb.ovsschema
-%exclude /usr/share/openvswitch/scripts/ovn-ctl
 %exclude %{_bindir}/ovs-l3ping
 %exclude %{_bindir}/ovs-parse-backtrace
 %exclude %{_bindir}/ovs-pki
 %exclude %{_bindir}/vtep-ctl
-%exclude %{_bindir}/ovn-controller
-%exclude %{_bindir}/ovn-controller-vtep
-%exclude %{_bindir}/ovn-docker-overlay-driver
-%exclude %{_bindir}/ovn-docker-underlay-driver
-%exclude %{_bindir}/ovn-nbctl
-%exclude %{_bindir}/ovn-northd
-%exclude %{_bindir}/ovn-sbctl
-%exclude %{_mandir}/man5/ovn-nb.5.gz
-%exclude %{_mandir}/man5/ovn-sb.5.gz
 %exclude %{_mandir}/man5/vtep.5.gz
-%exclude %{_mandir}/man7/ovn-architecture.7.gz
-%exclude %{_mandir}/man8/ovs-l3ping.8.gz
-%exclude %{_mandir}/man8/ovs-parse-backtrace.8.gz
-%exclude %{_mandir}/man8/ovs-pki.8.gz
-%exclude %{_mandir}/man8/ovs-test.8.gz
 %exclude %{_mandir}/man8/vtep-ctl.8.gz
-%exclude %{_mandir}/man8/ovn-controller-vtep.8.gz
-%exclude %{_mandir}/man8/ovn-controller.8.gz
-%exclude %{_mandir}/man8/ovn-ctl.8.gz
-%exclude %{_mandir}/man8/ovn-nbctl.8.gz
-%exclude %{_mandir}/man8/ovn-northd.8.gz
-%exclude %{_mandir}/man8/ovn-sbctl.8.gz
 %exclude %{_datadir}/openvswitch/python/ovstest
 %exclude %{_datadir}/openvswitch/scripts/ovs-vtep
 %exclude %{_datadir}/openvswitch/vtep.ovsschema
@@ -365,7 +339,6 @@ tunnels using IPsec.
 
 %files ipsec
 %{_unitdir}/openvswitch-ipsec.service
-%{_datadir}/openvswitch/scripts/ovs-monitor-ipsec
 
 %post ipsec
 %systemd_post openvswitch-ipsec.service
@@ -377,6 +350,15 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Mon Jan 22 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-1.1
+- Update to 2.17.7-1
+- Add openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch (Benjamin Reis)
+- Add openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch (Benjamin Reis)
+- Get ipsec script and service from new sources (Benjamin Reis)
+- *** Upstream changelog ***
+- * Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
+- - CP-44181: upgrade to OVS LTS 2.17.7
+
 * Fri Sep 15 2023 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.5.3-2.3.14.1
 - Update to 2.5.3-2.3.14
 - Drop openvswitch-2.5.3-CVE-2023-1668.backport.patch, now patched in XenServer's RPM
