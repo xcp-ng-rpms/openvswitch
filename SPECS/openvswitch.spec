@@ -37,6 +37,7 @@ Patch15: hide-logrotate-script-error.patch
 
 # XCP-ng patches
 Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
+Patch1001: openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -350,6 +351,7 @@ tunnels using IPsec.
 * Thu Jan 25 2024 Benjamin Reis <benjamin.reis@vates.tech> - 2.17.7-1.1
 - Update to 2.17.7-1
 - Add openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
+- Add openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
 - Get ipsec script and service from new sources
 - *** Upstream changelog ***
 - * Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
