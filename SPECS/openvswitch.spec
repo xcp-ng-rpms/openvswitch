@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
@@ -38,6 +38,8 @@ Patch15: hide-logrotate-script-error.patch
 # XCP-ng patches
 Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
 Patch1001: openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
+Patch1002: openvswitch-2.17.7-CVE-2023-3966-netdev-offload-tc-Check-geneve-metadata-length.backport.patch
+Patch1003: openvswitch-2.17.7-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -350,6 +352,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Mar 01 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.2
+- Apply fix for CVE-2023-3966, provided in advisory
+- Apply fix for CVE-2023-5366, provided in advisory
+
 * Mon Jan 22 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-1.1
 - Update to 2.17.7-1
 - Add openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch (Benjamin Reis)
