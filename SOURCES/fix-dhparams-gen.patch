@@ -1,0 +1,14 @@
+diff --git a/lib/automake.mk b/lib/automake.mk
+index 5387d51..5b737f3 100644
+--- a/lib/automake.mk
++++ b/lib/automake.mk
+@@ -407,7 +407,8 @@ lib/dhparams.c: lib/dh1024.pem lib/dh2048.pem lib/dh4096.pem
+ 	 openssl dhparam -C -in $(srcdir)/lib/dh1024.pem -noout &&	\
+ 	 openssl dhparam -C -in $(srcdir)/lib/dh2048.pem -noout &&	\
+ 	 openssl dhparam -C -in $(srcdir)/lib/dh4096.pem -noout)	\
+-	| sed 's/\(get_dh[0-9]*\)()/\1(void)/' > lib/dhparams.c.tmp &&  \
++	| sed 's/\(get_dh[0-9]*\)()/\1(void)/'	\
++	| sed 's/^static DH/DH/' > lib/dhparams.c.tmp &&  \
+ 	mv lib/dhparams.c.tmp lib/dhparams.c
+ else
+ lib_libopenvswitch_la_SOURCES += lib/stream-nossl.c
