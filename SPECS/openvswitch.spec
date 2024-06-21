@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.2%{?dist}
+Release: %{?xsrel}.3%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
@@ -40,12 +40,13 @@ Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
 Patch1001: openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
 Patch1002: openvswitch-2.17.7-CVE-2023-3966-netdev-offload-tc-Check-geneve-metadata-length.backport.patch
 Patch1003: openvswitch-2.17.7-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
+Patch1004: ovs-ctl-set-default-ssl-ciphers-and-protocols.patch
 
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-BuildRequires: openssl, openssl-devel, python3
+BuildRequires: xs-openssl, xs-openssl-devel, python3
 BuildRequires: autoconf, automake, libtool
 %if %{with_asan}
 BuildRequires: libasan
@@ -352,6 +353,12 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Jun 21 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.3
+- Link with xs-openssl instead of openssl
+- Tweak ovs-ctl script that is used to start ovsdb-server, passing it
+  --ssl-ciphers and --ssl-protocols command line parameters to disable weak
+  ciphers.
+
 * Fri Mar 01 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.2
 - Apply fix for CVE-2023-3966, provided in advisory
 - Apply fix for CVE-2023-5366, provided in advisory
