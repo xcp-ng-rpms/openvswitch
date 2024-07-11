@@ -353,6 +353,9 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Thu Jul 11 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.4
+- Disable TLSv1.3 as it makes ovsdb-server spam error in logs
+
 * Fri Jun 21 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.3
 - Link with xs-openssl instead of openssl
 - Tweak ovs-ctl script that is used to start ovsdb-server, passing it
