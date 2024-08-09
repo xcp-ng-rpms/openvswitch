@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.4%{?dist}
+Release: %{?xsrel}.5%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
@@ -46,7 +46,7 @@ Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-BuildRequires: xs-openssl, xs-openssl-devel, python3
+BuildRequires: openssl, openssl-devel, python3
 BuildRequires: autoconf, automake, libtool
 %if %{with_asan}
 BuildRequires: libasan
@@ -353,6 +353,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Aug 09 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.5
+- link back to openssl to avoid issues with XO sdn-controller
+- use ciphers that works with XO sdn-controller and should not be considered as weak-ciphers
+
 * Thu Jul 11 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.4
 - Disable TLSv1.3 as it makes ovsdb-server spam error in logs
 
