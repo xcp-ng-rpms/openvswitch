@@ -9,7 +9,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.12.3%{?dist}
+Release: 2.3.12.4%{?dist}
 
 Source0: openvswitch.tar.gz
 Source1: openvswitch-ipsec.service
@@ -57,10 +57,6 @@ Patch1000: openvswitch-2.5.3-CVE-2023-1668-ofproto-dpif-xlate-Always-mask-ip-pro
 Patch1001: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
 # Upsteam CVE fix
 Patch1002: openvswitch-2.5.3-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
-# Fix dhparams.c generation with openssl 1.1.1 (from xs-openssl)
-Patch1003: fix-dhparams-gen.patch
-# Avoid exposing weak ciphers though an openssl configuration file
-Patch1004: ovsdb-server-custom-openssl-config-to-limit-ciphers-and-protocols.patch
 
 Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
 Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
@@ -69,7 +65,7 @@ Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-BuildRequires: glibc-static, kernel-devel, xs-openssl, xs-openssl-devel, xs-openssl-libs, python
+BuildRequires: glibc-static, kernel-devel, openssl, openssl-devel, openssl-static, python
 BuildRequires: autoconf, automake, libtool
 %if %{with_asan}
 BuildRequires: libasan
@@ -133,8 +129,6 @@ install -d -m 755 %{buildroot}/var/log/openvswitch
 install -d -m 755 %{buildroot}/var/xen/openvswitch
 
 install -d -m 755 %{buildroot}/%{_sysconfdir}/openvswitch
-install -m 644 xcp-ng/etc_openvswitch_openssl-xcpng-ovsdb.conf \
-            %{buildroot}/%{_sysconfdir}/openvswitch/openssl-xcpng-ovsdb.conf
 
 install -d -m 755 %{buildroot}/%{_sysconfdir}/sysconfig
 install -m 755 xenserver/usr_share_openvswitch_scripts_sysconfig.template \
@@ -197,7 +191,6 @@ make check
 %config %{_sysconfdir}/logrotate.d/openvswitch
 %{_sysconfdir}/xapi.d/plugins/openvswitch-cfg-update
 %dir %{_sysconfdir}/openvswitch
-%config %{_sysconfdir}/openvswitch/openssl-xcpng-ovsdb.conf
 %dir /run/openvswitch
 %dir %{_var}/xen/openvswitch
 %dir %{_var}/lib/openvswitch
@@ -383,6 +376,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Aug 09 2024 David Morel <david.morel@vates.tech> - 2.5.3-2.3.12.4
+- Link back to openssl as linking with xs-openssl does not work with XO
+  sdn-controller plugin.
+
 * Mon Jun 10 2024 David Morel <david.morel@vates.tech> - 2.5.3-2.3.12.3
 - link with xs-openssl instead of openssl
 - fix compilation with an openssl from 1.1.1 branch
