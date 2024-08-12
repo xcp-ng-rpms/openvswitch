@@ -1,6 +1,6 @@
-%global package_speccommit 4700026553159f8d45bd51a503938b6f2d9cf3a4
+%global package_speccommit fc6660be6dedf78939d0c2a115aee72009704c84
 %global usver 2.17.7
-%global xsver 1
+%global xsver 2
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v2.17.7
 %global __python %{_bindir}/python3
@@ -322,6 +322,9 @@ Open vSwitch Linux kernel module compiled against kernel version
 %endif
 
 %changelog
+* Thu Jun 13 2024 Lin Liu <Lin.Liu01@cloud.com> - 2.17.7-2
+- CP-46117: Refresh patches to build with XS9
+
 * Wed Aug 23 2023 Chunjie Zhu <chunjie.zhu@cloud.com> - 2.17.7-1
 - CP-44181: upgrade to OVS LTS 2.17.7
 

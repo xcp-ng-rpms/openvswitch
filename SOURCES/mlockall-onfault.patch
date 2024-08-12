@@ -12,12 +12,12 @@ vswitchd is not swapped out but frees up ~144 MiB of unswappable memory
 (18 threads x 8 MiB).  After this, vswitchd uses ~6 MiB when idle after
 startup.
 diff --git a/vswitchd/ovs-vswitchd.c b/vswitchd/ovs-vswitchd.c
-index e78ecda93..bdd1fbbec 100644
+index 407bfc60eb68..9dc666bc73b1 100644
 --- a/vswitchd/ovs-vswitchd.c
 +++ b/vswitchd/ovs-vswitchd.c
-@@ -50,6 +50,10 @@
+@@ -54,6 +54,10 @@
  #include "lib/vswitch-idl.h"
- #include "lib/netdev-dpdk.h"
+ #include "lib/dns-resolve.h"
  
 +#ifndef MCL_ONFAULT
 +#define MCL_ONFAULT     4
@@ -26,12 +26,12 @@ index e78ecda93..bdd1fbbec 100644
  VLOG_DEFINE_THIS_MODULE(vswitchd);
  
  /* --mlockall: If set, locks all process memory into physical RAM, preventing
-@@ -89,7 +93,7 @@ main(int argc, char *argv[])
+@@ -93,7 +97,7 @@ main(int argc, char *argv[])
  
      if (want_mlockall) {
  #ifdef HAVE_MLOCKALL
 -        if (mlockall(MCL_CURRENT | MCL_FUTURE)) {
 +        if (mlockall(MCL_CURRENT | MCL_FUTURE | MCL_ONFAULT)) {
              VLOG_ERR("mlockall failed: %s", ovs_strerror(errno));
-         }
- #else
+         } else {
+             set_memory_locked();
