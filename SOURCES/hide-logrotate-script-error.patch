@@ -5,12 +5,8 @@ files that need rotating but the /var/run/openvswitch directory will not exist.
 This causes spam in dead.letter. Hide the error in that case.
 
 Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
----
- xenserver/etc_logrotate.d_openvswitch | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/xenserver/etc_logrotate.d_openvswitch b/xenserver/etc_logrotate.d_openvswitch
-index cd7b3a9d5..d644c8a79 100644
+index cd7b3a9d569d..d644c8a79efe 100644
 --- a/xenserver/etc_logrotate.d_openvswitch
 +++ b/xenserver/etc_logrotate.d_openvswitch
 @@ -13,7 +13,7 @@
@@ -22,6 +18,3 @@ index cd7b3a9d5..d644c8a79 100644
  		ovs-appctl -t "${pidfile%%.pid}" vlog/reopen 2>/dev/null || :
  	    done
  	fi
--- 
-2.34.1
-

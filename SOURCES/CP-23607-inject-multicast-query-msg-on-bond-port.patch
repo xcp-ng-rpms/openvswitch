@@ -3,16 +3,8 @@ From: Chunjie Zhu <chunjie.zhu@cloud.com>
 Date: Wed, 23 Aug 2023 06:20:00 +0000
 Subject: [PATCH] CP-23607: inject multicast query msg on bond port
 
----
- lib/packets.c          | 40 +++++++++++++++++++++
- lib/packets.h          |  1 +
- ofproto/bond.c         | 12 +++++--
- ofproto/bond.h         |  6 ++--
- ofproto/ofproto-dpif.c | 81 +++++++++++++++++++++++++++++++++++++++++-
- 5 files changed, 134 insertions(+), 6 deletions(-)
-
 diff --git a/lib/packets.c b/lib/packets.c
-index 1dcd4a6fc..8b9e6f5ac 100644
+index 1dcd4a6fcd21..8b9e6f5ac768 100644
 --- a/lib/packets.c
 +++ b/lib/packets.c
 @@ -192,6 +192,46 @@ eth_addr_from_string(const char *s, struct eth_addr *ea)
@@ -63,7 +55,7 @@ index 1dcd4a6fc..8b9e6f5ac 100644
   * This function is used by Open vSwitch to compose packets in cases where
   * context is important but content doesn't (or shouldn't) matter.
 diff --git a/lib/packets.h b/lib/packets.h
-index 5bdf6e4bb..974e1c849 100644
+index 5bdf6e4bbd97..974e1c84928b 100644
 --- a/lib/packets.h
 +++ b/lib/packets.h
 @@ -337,6 +337,7 @@ static inline uint32_t hash_mac(const struct eth_addr ea,
@@ -75,7 +67,7 @@ index 5bdf6e4bb..974e1c849 100644
  
  void eth_push_vlan(struct dp_packet *, ovs_be16 tpid, ovs_be16 tci);
 diff --git a/ofproto/bond.c b/ofproto/bond.c
-index a7c859b90..e64372fd6 100644
+index a7c859b9098b..e64372fd69c0 100644
 --- a/ofproto/bond.c
 +++ b/ofproto/bond.c
 @@ -696,7 +696,7 @@ bond_member_set_may_enable(struct bond *bond, void *member_, bool may_enable)
@@ -118,7 +110,7 @@ index a7c859b90..e64372fd6 100644
   * port_aux and takes ownership of the returned ofpbuf. */
  struct dp_packet *
 diff --git a/ofproto/bond.h b/ofproto/bond.h
-index e7f7ea7a9..653b4a29a 100644
+index e7f7ea7a9518..653b4a29aaea 100644
 --- a/ofproto/bond.h
 +++ b/ofproto/bond.h
 @@ -84,8 +84,10 @@ void bond_wait(struct bond *);
@@ -135,10 +127,10 @@ index e7f7ea7a9..653b4a29a 100644
                                                 const struct eth_addr eth_src,
                                                 uint16_t vlan, void **port_aux);
 diff --git a/ofproto/ofproto-dpif.c b/ofproto/ofproto-dpif.c
-index 681585005..e2732b1d2 100644
+index 60f81c6b71c8..a27b808aec85 100644
 --- a/ofproto/ofproto-dpif.c
 +++ b/ofproto/ofproto-dpif.c
-@@ -3602,6 +3602,8 @@ bundle_send_learning_packets(struct ofbundle *bundle)
+@@ -3598,6 +3598,8 @@ bundle_send_learning_packets(struct ofbundle *bundle)
      }
  }
  
@@ -147,7 +139,7 @@ index 681585005..e2732b1d2 100644
  static void
  bundle_run(struct ofbundle *bundle)
  {
-@@ -3619,7 +3621,8 @@ bundle_run(struct ofbundle *bundle)
+@@ -3615,7 +3617,8 @@ bundle_run(struct ofbundle *bundle)
              bundle->ofproto->backer->need_revalidate = REV_BOND;
          }
  
@@ -157,7 +149,7 @@ index 681585005..e2732b1d2 100644
              bundle_send_learning_packets(bundle);
          }
      }
-@@ -6142,6 +6145,82 @@ ofproto_unixctl_mcast_snooping_show(struct unixctl_conn *conn,
+@@ -6138,6 +6141,82 @@ ofproto_unixctl_mcast_snooping_show(struct unixctl_conn *conn,
      ds_destroy(&ds);
  }
  
@@ -240,6 +232,3 @@ index 681585005..e2732b1d2 100644
  /* Store the current ofprotos in 'ofproto_shash'.  Returns a sorted list
   * of the 'ofproto_shash' nodes.  It is the responsibility of the caller
   * to destroy 'ofproto_shash' and free the returned value. */
--- 
-2.34.1
-

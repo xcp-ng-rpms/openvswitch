@@ -1,6 +1,6 @@
-%global package_speccommit 4700026553159f8d45bd51a503938b6f2d9cf3a4
+%global package_speccommit fc6660be6dedf78939d0c2a115aee72009704c84
 %global usver 2.17.7
-%global xsver 1
+%global xsver 2
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit refs/tags/v2.17.7
 %global __python %{_bindir}/python3
@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.5%{?dist}
+Release: %{?xsrel}.1%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
@@ -353,6 +353,12 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Mon Aug 12 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-2.1
+- Sync with 2.17.7-2
+- *** Upstream changelog ***
+- * Thu Jun 13 2024 Lin Liu <Lin.Liu01@cloud.com> - 2.17.7-2
+- - CP-46117: Refresh patches to build with XS9
+
 * Fri Aug 09 2024 David Morel <david.morel@vates.tech> - 2.17.7-1.5
 - link back to openssl to avoid issues with XO sdn-controller
 - use ciphers that works with XO sdn-controller and should not be considered as weak-ciphers
