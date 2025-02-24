@@ -1,6 +1,12 @@
+%global package_speccommit 30a3871f95256dbd35480d24029207bbbc8a6c52
+%global usver 2.5.3
+%global xsver 2.3.14
+%global xsrel %{xsver}%{?xscount}%{?xshash}
+%global package_srccommit refs/tags/v2.5.3
+
 # Control whether we build with the address sanitizer.
 # Default enabled: (to override: --without asan)
-#%%define with_asan  %{?_without_asan: 0} %{?!_without_asan: 1}
+#%%define with_asan  %%{?_without_asan: 0} %%{?!_without_asan: 1}
 # Default disabled: (to override: --with asan)
 %define with_asan  %{?_with_asan: 1} %{?!_with_asan: 0}
 
@@ -9,9 +15,9 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: 2.3.12.4%{?dist}
+Release: %{?xsrel}.1%{?dist}
 
-Source0: openvswitch.tar.gz
+Source0: openvswitch-2.5.3.tar.gz
 Source1: openvswitch-ipsec.service
 Source2: ovs-monitor-ipsec
 
@@ -33,39 +39,35 @@ Patch14: 0001-bond-Remove-executable-bit-from-bond.c.patch
 Patch15: 0001-lacp-Avoid-packet-drop-on-LACP-bond-after-link-up.patch
 Patch16: 0001-lacp-report-desync-in-ovs-threads-enabling-slave.patch
 Patch17: 0001-ofproto-bond-Improve-admissibility-debug-readability.patch
-Patch18: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
-Patch19: CP-15129-Convert-to-use-systemd-services.patch
-Patch20: CA-78639-dont-call-interface-reconfigure-anymore.patch
-Patch21: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
-Patch22: CA-153718-md5-verification-dvsc.patch
-Patch23: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
-Patch24: CP-13181-add-dropping-of-fip-and-lldp.patch
-Patch25: use-old-db-port-6632-for-dvsc.patch
-Patch26: CA-243975-Fix-openvswitch-service-startup-failure.patch
-Patch27: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
-Patch28: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
-Patch29: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
-Patch30: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
-Patch31: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
-Patch32: CP-23607-inject-multicast-query-msg-on-bond-port.patch
-Patch33: mlockall-onfault.patch
-Patch34: hide-logrotate-script-error.patch
+Patch18: 0001-ofproto-dpif-xlate-Always-mask-ip-proto-field.patch
+Patch19: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
+Patch20: CP-15129-Convert-to-use-systemd-services.patch
+Patch21: CA-78639-dont-call-interface-reconfigure-anymore.patch
+Patch22: CA-141390-dont-read-proc-cpuinfo-if-running-on-xenserver.patch
+Patch23: CA-153718-md5-verification-dvsc.patch
+Patch24: CP-9895-Add-originator-to-login_with_password-xapi-call.patch
+Patch25: CP-13181-add-dropping-of-fip-and-lldp.patch
+Patch26: use-old-db-port-6632-for-dvsc.patch
+Patch27: CA-243975-Fix-openvswitch-service-startup-failure.patch
+Patch28: CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+Patch29: CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+Patch30: 0001-xenserver-fix-Python-errors-in-Citrix-changes.patch
+Patch31: 0002-O3eng-applied-patch-on-top-of-the-NSX-OVS.patch
+Patch32: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
+Patch33: CP-23607-inject-multicast-query-msg-on-bond-port.patch
+Patch34: mlockall-onfault.patch
+Patch35: hide-logrotate-script-error.patch
 
 # XCP-ng patches
-# Backported from XS 8
-Patch1000: openvswitch-2.5.3-CVE-2023-1668-ofproto-dpif-xlate-Always-mask-ip-proto-field.XS.patch
-Patch1001: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
+Patch1000: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
 # Upsteam CVE fix
-Patch1002: openvswitch-2.5.3-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
-
-Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
+Patch1001: openvswitch-2.5.3-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
 
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-BuildRequires: glibc-static, kernel-devel, openssl, openssl-devel, openssl-static, python
+BuildRequires: openssl, openssl-devel, python
 BuildRequires: autoconf, automake, libtool
 %if %{with_asan}
 BuildRequires: libasan
@@ -87,6 +89,7 @@ BuildRequires: libasan
                         fi)
 
 %if %build_modules
+BuildRequires: kernel-devel
 %define with_linux --with-linux=/lib/modules/%{kernel_version}/build
 %endif
 
@@ -110,7 +113,7 @@ LDFLAGS="-Wl,-z,relro -fsanitize=address"
 export CFLAGS CXXFLAGS LDFLAGS
 %endif
 
-%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log/openvswitch --with-dbdir=/run/openvswitch %{?with_linux} 
+%configure --enable-ssl --without-pcre --without-ncurses --with-logdir=/var/log/openvswitch --with-dbdir=/run/openvswitch %{?with_linux}
 
 %{?_cov_wrap} %{__make} %{_smp_mflags}
 
@@ -247,8 +250,8 @@ make check
 %{_datadir}/openvswitch/python/ovs/util.py*
 %{_datadir}/openvswitch/python/ovs/vlog.py*
 %{_datadir}/openvswitch/python/ovs/version.py*
-#%{_datadir}/openvswitch/python/argparse.py*
-#%{_datadir}/openvswitch/python/uuid.py*
+#%%{_datadir}/openvswitch/python/argparse.py*
+#%%{_datadir}/openvswitch/python/uuid.py*
 %{_datadir}/openvswitch/vswitch.ovsschema
 %{_datadir}/openvswitch/scripts/ovs-lib
 %{_datadir}/openvswitch/scripts/ovs-bugtool-*
@@ -322,8 +325,6 @@ make check
 %if %build_modules
 
 %package modules
-Provides: gitsha(ssh://git@code.citrite.net/XSU/openvswitch.git) = e954fdbfa97a1a357a4dcfff80f5bd916a2eb647
-Provides: gitsha(ssh://git@code.citrite.net/XS/openvswitch.pg.git) = 0420b368c506f3bc646488862ea47bec2b7ef67b
 Summary: Open vSwitch kernel module
 Version: %(echo "%{kernel_version}" | tr - .)
 License: GPLv2
@@ -376,6 +377,14 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Tue Jan 30 2025 David Morel <david.morel@vates.tech> - 2.5.3-2.3.14.1
+- Sync with hotfix XS82ECU1081
+- *** Upstream changelog ***
+- * Tue Apr 18 2023 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.14
+- - CA-376367: Fix CVE-2023-1668
+- * Tue Jun 14 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.5.3-2.3.13
+- - CA-367973: Backport bond-related patches to fix XSI-1198
+
 * Fri Aug 09 2024 David Morel <david.morel@vates.tech> - 2.5.3-2.3.12.4
 - Link back to openssl as linking with xs-openssl does not work with XO
   sdn-controller plugin.
