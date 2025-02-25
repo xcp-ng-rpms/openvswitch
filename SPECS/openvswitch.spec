@@ -15,7 +15,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.5.3
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 
 Source0: openvswitch-2.5.3.tar.gz
 Source1: openvswitch-ipsec.service
@@ -62,6 +62,7 @@ Patch35: hide-logrotate-script-error.patch
 Patch1000: openvswitch-2.5.3-comment-failing-tests.XCP-ng.patch
 # Upsteam CVE fix
 Patch1001: openvswitch-2.5.3-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
+Patch1002: openvswitch-2.5.3-CVE-2022-4337-CVE-2022-4338.backport.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -377,6 +378,10 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Tue Feb 25 2025 Lucas Ravagnier <lucas.ravagnier@vates.tech> - 2.5.3-2.3.14.2
+- Fix DOS with a malformed packet on LLDP
+  (CVE-2022-4337 & CVE-2022-4338)
+
 * Tue Jan 30 2025 David Morel <david.morel@vates.tech> - 2.5.3-2.3.14.1
 - Sync with hotfix XS82ECU1081
 - *** Upstream changelog ***
