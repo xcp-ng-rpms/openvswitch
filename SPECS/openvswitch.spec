@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.1.0.ydi.1%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: CA-72973-hack-to-strip-temp-dirs-from-paths.patch
 Patch1: CP-15129-Convert-to-use-systemd-services.patch
@@ -34,6 +34,9 @@ Patch12: 0003-update-bridge-fail-mode-settings-when-bridge-comes-up.patch
 Patch13: CP-23607-inject-multicast-query-msg-on-bond-port.patch
 Patch14: mlockall-onfault.patch
 Patch15: hide-logrotate-script-error.patch
+
+# upstream backports
+Patch100: 0001-ovs-atomic-Fix-inclusion-of-Clang-header-by-GCC-14.patch
 
 # XCP-ng patches
 Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
@@ -353,6 +356,9 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Mon Jul  7 2025 Yann Dirson <yann.dirson@vates.tech> - 2.17.7-2.1.0.ydi.1
+- Upstream patch: ovs-atomic: Fix inclusion of Clang header by GCC 14.
+
 * Mon Aug 12 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-2.1
 - Sync with 2.17.7-2
 - *** Upstream changelog ***
