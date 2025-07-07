@@ -47,6 +47,7 @@ Patch1004: ovs-ctl-set-default-ssl-ciphers-and-protocols.patch
 Patch1005: 0001-manpage-check-enable-more-error-diagnostics.patch
 Patch1006: 0002-manpage-check-be-explicit-that-it-fails-because-of-a.patch
 Patch1007: 0003-manpage-check-disable.patch
+Patch1008: 0004-HACK-Address-python-warning-in-xenserver-tests.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -362,6 +363,7 @@ tunnels using IPsec.
 * Mon Jul  7 2025 Yann Dirson <yann.dirson@vates.tech> - 2.17.7-2.1.0.ydi.1
 - Upstream patch: ovs-atomic: Fix inclusion of Clang header by GCC 14.
 - Added patches to reveal problematic manpage-check command
+- Fix python warning in xenserver tests
 
 * Mon Aug 12 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-2.1
 - Sync with 2.17.7-2
