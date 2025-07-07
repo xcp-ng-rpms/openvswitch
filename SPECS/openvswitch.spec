@@ -37,6 +37,8 @@ Patch15: hide-logrotate-script-error.patch
 
 # upstream backports
 Patch100: 0001-ovs-atomic-Fix-inclusion-of-Clang-header-by-GCC-14.patch
+Patch101: 0001-tests-Fix-compatibility-issue-with-Python-3.13-in-vl.patch
+Patch102: 0001-tests-Fix-non-portable-plus-match-in-python-vlog-tes.patch
 
 # XCP-ng patches
 Patch1000: openvswitch-2.17.7-comment-failing-tests.XCP-ng.patch
@@ -361,7 +363,10 @@ tunnels using IPsec.
 
 %changelog
 * Mon Jul  7 2025 Yann Dirson <yann.dirson@vates.tech> - 2.17.7-2.1.0.ydi.1
-- Upstream patch: ovs-atomic: Fix inclusion of Clang header by GCC 14.
+- Upstream patches:
+  - ovs-atomic: Fix inclusion of Clang header by GCC 14.
+  - tests: Fix compatibility issue with Python 3.13 in vlog.at.
+  - tests: Fix non-portable plus match in python vlog test.
 - Added patches to reveal problematic manpage-check command
 - Fix python warning in xenserver tests
 
