@@ -44,6 +44,9 @@ Patch1001: openvswitch-2.17.7-add-pythonpath-ipsec.XCP-ng.patch
 Patch1002: openvswitch-2.17.7-CVE-2023-3966-netdev-offload-tc-Check-geneve-metadata-length.backport.patch
 Patch1003: openvswitch-2.17.7-CVE-2023-5366-odp-ND-Follow-Open-Flow-spec-converting-from-OF-to-DP.backport.patch
 Patch1004: ovs-ctl-set-default-ssl-ciphers-and-protocols.patch
+Patch1005: 0001-manpage-check-enable-more-error-diagnostics.patch
+Patch1006: 0002-manpage-check-be-explicit-that-it-fails-because-of-a.patch
+Patch1007: 0003-manpage-check-disable.patch
 
 Requires(post): systemd
 Requires(preun): systemd
@@ -358,6 +361,7 @@ tunnels using IPsec.
 %changelog
 * Mon Jul  7 2025 Yann Dirson <yann.dirson@vates.tech> - 2.17.7-2.1.0.ydi.1
 - Upstream patch: ovs-atomic: Fix inclusion of Clang header by GCC 14.
+- Added patches to reveal problematic manpage-check command
 
 * Mon Aug 12 2024 Samuel Verschelde <stormi-xcp@ylix.fr> - 2.17.7-2.1
 - Sync with 2.17.7-2
