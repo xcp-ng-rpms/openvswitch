@@ -1,0 +1,34 @@
+From 6180fefa835c7cad36e89f77f3d9de13c680fb88 Mon Sep 17 00:00:00 2001
+From: Colin Watson <cjwatson@ubuntu.com>
+Date: Mon, 21 Aug 2023 15:53:34 +0200
+Subject: [PATCH] docs: Run tbl preprocessor in manpage-check rule.
+
+If we omit this, groff 1.23.0 warns:
+
+  tbl preprocessor failed, or it or soelim was not run; table(s) likely
+  not rendered (TE macro called with TW register undefined)
+
+Reported-by: Lucas Nussbaum <lucas@debian.org>
+Reported-at: https://bugs.debian.org/1042358
+Signed-off-by: Colin Watson <cjwatson@ubuntu.com>
+Signed-off-by: Ilya Maximets <i.maximets@ovn.org>
+---
+ Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index db341504d..265cf0a7b 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -368,7 +368,7 @@ ALL_LOCAL += manpage-check
+ manpage-check: $(man_MANS) $(dist_man_MANS) $(noinst_man_MANS)
+ 	@error=false; \
+ 	for manpage in $?; do \
+-	  LANG=en_US.UTF-8 groff -w mac -w delim -w escape -w input -w missing -w tab -T utf8 -man -p -z $$manpage >$@.tmp 2>&1; \
++	  LANG=en_US.UTF-8 groff -t -w mac -w delim -w escape -w input -w missing -w tab -T utf8 -man -p -z $$manpage >$@.tmp 2>&1; \
+ 	  if grep warning: $@.tmp; then error=:; fi; \
+ 	  rm -f $@.tmp; \
+ 	done; \
+-- 
+2.25.1
+
