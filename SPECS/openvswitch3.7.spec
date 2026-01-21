@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.1%{?dist}
+Release: 0.2%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -96,7 +96,7 @@ Source101: https://pypi.io/packages/source/P/Pygments/Pygments-%{pygmentsver}.ta
 Source102: https://pypi.io/packages/source/S/Sphinx/Sphinx-%{sphinxver}.tar.gz
 Source103: https://pypi.io/packages/source/p/pyelftools/pyelftools-%{pyelftoolsver}.tar.gz
 
-
+Patch0:    openvswitch-%{ovsver}.patch
 
 # The DPDK is designed to optimize througput of network traffic using, among
 # other techniques, carefully crafted assembly instructions.  As such it
@@ -816,6 +816,12 @@ exit 0
 %endif
 
 %changelog
+* Wed Jan 21 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.2
+- Merging upstream branch-3.7 [RH git: 6a4cd68ef0]
+    Commit list:
+    5057e33f9c dpif-offload: Rename offload provider local functions and structures.
+
+
 * Sat Jan 17 2026 Michael Santana <msantana@redhat.com> - 3.7.0-0.1
 - Add 'redhat/' from commit '17b0ae25fc4c26baf0208bc676349e4c3b2bf7be' [RH git: 40425d1fba]
     git-subtree-dir: redhat
