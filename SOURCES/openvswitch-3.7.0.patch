@@ -1,3 +1,16 @@
+diff --git a/lib/dpdk.c b/lib/dpdk.c
+index 4dd5e97895..d27b95cd9a 100644
+--- a/lib/dpdk.c
++++ b/lib/dpdk.c
+@@ -185,7 +185,7 @@ construct_dpdk_mutex_options(const struct smap *ovs_other_config,
+     int i;
+     for (i = 0; i < ARRAY_SIZE(excl_opts); ++i) {
+         int found_opts = 0, scan, found_pos = -1;
+-        const char *found_value;
++        const char *found_value = NULL;
+         struct dpdk_exclusive_options_map *popt = &excl_opts[i];
+ 
+         for (scan = 0; scan < MAX_DPDK_EXCL_OPTS
 diff --git a/lib/dpif-offload-dpdk-netdev.c b/lib/dpif-offload-dpdk-netdev.c
 index 9a66bd4137..d61365ed76 100644
 --- a/lib/dpif-offload-dpdk-netdev.c
