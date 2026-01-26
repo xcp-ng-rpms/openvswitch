@@ -1,3 +1,21 @@
+diff --git a/NEWS b/NEWS
+index c14bb45867..e4b355460a 100644
+--- a/NEWS
++++ b/NEWS
+@@ -23,9 +23,10 @@ v3.7.0 - xx xxx xxxx
+      * New global configuration option 'other-config:hw-offload-priority'
+        that allows to set the order of the hardware offload providers
+        to try when multiple exist for a given datapath implementation.
+-     * New per-port configuration option 'other-config:hw-offload-priority'
+-       that allows to set order of the hardware offload providers or disable
+-       flow offloading on a particular port.
++     * New per-interface configuration option
++       'other-config:hw-offload-priority' that allows to set order of the
++       hardware offload providers or disable flow offloading on a particular
++       interface.
+    - OVSDB-IDL:
+      * New ovsdb_idl_txn_assert_read_only() interface to mark transactions
+        as read-only and trigger assertion failure when application attempts
 diff --git a/lib/dpdk.c b/lib/dpdk.c
 index 4dd5e97895..d27b95cd9a 100644
 --- a/lib/dpdk.c
@@ -3525,6 +3543,62 @@ index 3b91925630..fca106584a 100644
 +    .meter_del = tc_meter_del,
 +    .get_netdev = tc_get_netdev,
  };
+diff --git a/lib/dpif-offload.c b/lib/dpif-offload.c
+index f6ab65e980..0b8be8b058 100644
+--- a/lib/dpif-offload.c
++++ b/lib/dpif-offload.c
+@@ -59,7 +59,7 @@ static const struct dpif_offload_class *base_dpif_offload_classes[] = {
+ static char *dpif_offload_provider_priority_list = NULL;
+ static atomic_bool offload_global_enabled = false;
+ static atomic_bool offload_rebalance_policy = false;
+-static struct smap port_order_cfg = SMAP_INITIALIZER(&port_order_cfg);
++static struct smap iface_order_cfg = SMAP_INITIALIZER(&iface_order_cfg);
+ 
+ static int
+ dpif_offload_register_provider__(const struct dpif_offload_class *class)
+@@ -527,7 +527,7 @@ dpif_offload_port_add(struct dpif *dpif, struct netdev *netdev,
+                       odp_port_t port_no)
+ {
+     struct dpif_offload_provider_collection *collection;
+-    const char *port_priority = smap_get(&port_order_cfg,
++    const char *port_priority = smap_get(&iface_order_cfg,
+                                          netdev_get_name(netdev));
+     struct dpif_offload *offload;
+ 
+@@ -773,21 +773,26 @@ dpif_offload_set_global_cfg(const struct ovsrec_open_vswitch *cfg)
+         }
+     }
+ 
+-    /* Filter out the 'hw-offload-priority' per port setting we need it before
+-     * ports are added, so we can assign the correct offload-provider.
++    /* Filter out the 'hw-offload-priority' per interface setting.  We need it
++     * before ports are added, so we can assign the correct offload-provider.
+      * Note that we can safely rebuild the map here, as we only access this
+      * from the same (main) thread. */
+-    smap_clear(&port_order_cfg);
++    smap_clear(&iface_order_cfg);
+     for (int i = 0; i < cfg->n_bridges; i++) {
+         const struct ovsrec_bridge *br_cfg = cfg->bridges[i];
+ 
+         for (int j = 0; j < br_cfg->n_ports; j++) {
+             const struct ovsrec_port *port_cfg = br_cfg->ports[j];
+ 
+-            priority = smap_get(&port_cfg->other_config,
+-                                "hw-offload-priority");
+-            if (priority) {
+-                smap_add(&port_order_cfg, port_cfg->name, priority);
++            for (int k = 0; k < port_cfg->n_interfaces; k++) {
++                const struct ovsrec_interface *iface_cfg;
++
++                iface_cfg = port_cfg->interfaces[k];
++                priority = smap_get(&iface_cfg->other_config,
++                                    "hw-offload-priority");
++                if (priority) {
++                    smap_add(&iface_order_cfg, iface_cfg->name, priority);
++                }
+             }
+         }
+     }
 diff --git a/lib/dummy.h b/lib/dummy.h
 index 266c200c36..e5c9d4071c 100644
 --- a/lib/dummy.h
@@ -3553,3 +3627,174 @@ index 519d6d3ddb..7d3a7b9682 100644
  
      prev = NULL;
      LIST_FOR_EACH (rx, node, &dummy->rxes) {
+diff --git a/lib/ovs-router.c b/lib/ovs-router.c
+index 5ed6b78594..c11a527645 100644
+--- a/lib/ovs-router.c
++++ b/lib/ovs-router.c
+@@ -863,7 +863,7 @@ ovs_router_rules_show_json(struct json *rule_entries, bool ipv6)
+         entry = json_object_create();
+ 
+         json_object_put(entry, "priority", json_integer_create(rule->prio));
+-        json_object_put(entry, "user", json_integer_create(rule->user));
++        json_object_put(entry, "user", json_boolean_create(rule->user));
+         json_object_put(entry, "invert", json_boolean_create(rule->invert));
+         json_object_put(entry, "ipv4", json_boolean_create(rule->ipv4));
+         json_object_put(entry, "src-prefix",
+diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
+index ff628c362d..15dbfd60cf 100644
+--- a/tests/ofproto-dpif.at
++++ b/tests/ofproto-dpif.at
+@@ -10242,16 +10242,16 @@ AT_SETUP([ofproto-dpif - offload - port priority order])
+ AT_KEYWORDS([dpif-offload])
+ OVS_VSWITCHD_START([add-port br0 p1 -- \
+   set Interface p1 type=dummy ofport_request=1 -- \
+-  set port p1 other_config:hw-offload-priority=dummy_x,dummy -- \
++  set Interface p1 other_config:hw-offload-priority=dummy_x,dummy -- \
+   add-port br0 p2 -- \
+   set Interface p2 type=dummy ofport_request=2 -- \
+-  set port p2 other_config:hw-offload-priority=none -- \
++  set Interface p2 other_config:hw-offload-priority=none -- \
+   add-port br0 p3 -- \
+   set Interface p3 type=dummy ofport_request=3 -- \
+-  set port p3 other_config:hw-offload-priority=dummy_x -- \
++  set Interface p3 other_config:hw-offload-priority=dummy_x -- \
+   add-port br0 p4 -- \
+   set Interface p4 type=dummy ofport_request=4 -- \
+-  set port p4 other_config:hw-offload-priority=dummy])
++  set Interface p4 other_config:hw-offload-priority=dummy])
+ 
+ AT_CHECK([ovs-appctl --format json --pretty dpif/offload/show], [0], [dnl
+ {
+diff --git a/tests/ovs-router.at b/tests/ovs-router.at
+index 27667d5bcb..b5282fd195 100644
+--- a/tests/ovs-router.at
++++ b/tests/ovs-router.at
+@@ -258,6 +258,54 @@ Cached: 0: from all lookup local
+ Cached: 32766: from all lookup main
+ ])
+ 
++dnl Check JSON output for standard rules.
++AT_CHECK([ovs-appctl --format=json --pretty ovs/route/rule/show], [0], [dnl
++[[
++  {
++    "from": "all",
++    "invert": false,
++    "ipv4": true,
++    "lookup": 255,
++    "priority": 0,
++    "src-prefix": 0,
++    "user": false},
++  {
++    "from": "all",
++    "invert": false,
++    "ipv4": true,
++    "lookup": 254,
++    "priority": 32766,
++    "src-prefix": 0,
++    "user": false},
++  {
++    "from": "all",
++    "invert": false,
++    "ipv4": true,
++    "lookup": 253,
++    "priority": 32767,
++    "src-prefix": 0,
++    "user": false}]]
++])
++AT_CHECK([ovs-appctl --format=json --pretty ovs/route/rule/show -6], [0], [dnl
++[[
++  {
++    "from": "all",
++    "invert": false,
++    "ipv4": false,
++    "lookup": 255,
++    "priority": 0,
++    "src-prefix": 0,
++    "user": false},
++  {
++    "from": "all",
++    "invert": false,
++    "ipv4": false,
++    "lookup": 254,
++    "priority": 32766,
++    "src-prefix": 0,
++    "user": false}]]
++])
++
+ OVS_VSWITCHD_STOP
+ AT_CLEANUP
+ 
+diff --git a/vswitchd/vswitch.xml b/vswitchd/vswitch.xml
+index 29ad9c13e5..b7a5afc0a5 100644
+--- a/vswitchd/vswitch.xml
++++ b/vswitchd/vswitch.xml
+@@ -2600,30 +2600,6 @@
+         e.g. <code>fake-bridge-bridge-id</code>.
+       </column>
+ 
+-      <column name="other_config" key="hw-offload-priority"
+-              type='{"type": "string"}'>
+-        <p>
+-          This configuration sets an explicit list of hardware offload
+-          providers to try on this port.  The argument should be a
+-          comma-separated list of hardware offload provider names, or the
+-          word <code>none</code>.
+-        </p>
+-        <p>
+-          If <code>none</code> is encountered in the list, further trying of
+-          offload providers is stopped. For example, if the list only contains
+-          <code>none</code>, hardware offload is disabled on this port even if
+-          it is globally enabled. Note that unknown hardware offload provider
+-          names are ignored.
+-        </p>
+-        <p>
+-          If not set, uses the global
+-          <ref table="Open_vSwitch" column="other_config"
+-               key="hw-offload-priority"/>
+-          configuration.  Changing this value after offload enablement requires
+-          restarting the daemon.
+-        </p>
+-      </column>
+-
+       <column name="other_config" key="transient"
+               type='{"type": "boolean"}'>
+         <p>
+@@ -4681,6 +4657,38 @@ ovs-vsctl add-port br0 p0 -- set Interface p0 type=patch options:peer=p1 \
+       </column>
+     </group>
+ 
++    <group title="Hardware Offload Configuration">
++      <column name="other_config" key="hw-offload-priority"
++              type='{"type": "string"}'>
++        <p>
++          This configuration sets an explicit list of hardware offload
++          providers to try on this Interface.  The argument should be a
++          comma-separated list of hardware offload provider names, or the
++          word <code>none</code>.
++        </p>
++        <p>
++          If <code>none</code> is encountered in the list, further trying of
++          offload providers is stopped.  For example, if the list only contains
++          <code>none</code>, hardware offload is disabled on this interface
++          even if it is globally enabled.  Note that unknown hardware offload
++          provider names are ignored.
++        </p>
++        <p>
++          If not set, uses the global
++          <ref table="Open_vSwitch" column="other_config"
++               key="hw-offload-priority"/>
++          configuration.  Changing this value after offload enablement requires
++          restarting the daemon.  To avoid restarting the daemon, set this
++          option in the same transaction that adds the port.  For example:
++        </p>
++
++        <pre>
++ovs-vsctl add-port br0 p1 -- \
++          set Interface p1 other_config:hw-offload-priority=none
++       </pre>
++      </column>
++    </group>
++
+     <group title="Common Columns">
+       The overall purpose of these columns is described under <code>Common
+       Columns</code> at the beginning of this document.
