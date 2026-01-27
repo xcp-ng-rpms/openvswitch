@@ -3640,6 +3640,18 @@ index 5ed6b78594..c11a527645 100644
          json_object_put(entry, "invert", json_boolean_create(rule->invert));
          json_object_put(entry, "ipv4", json_boolean_create(rule->ipv4));
          json_object_put(entry, "src-prefix",
+diff --git a/lib/rconn.c b/lib/rconn.c
+index 4afa215154..3815cfed5b 100644
+--- a/lib/rconn.c
++++ b/lib/rconn.c
+@@ -1285,6 +1285,7 @@ close_monitor(struct rconn *rc, size_t idx, int retval)
+     VLOG_DBG("%s: closing monitor connection to %s: %s",
+              rconn_get_name(rc), vconn_get_name(rc->monitors[idx]),
+              ovs_retval_to_string(retval));
++    vconn_close(rc->monitors[idx]);
+     rc->monitors[idx] = rc->monitors[--rc->n_monitors];
+ }
+ 
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
 index ff628c362d..15dbfd60cf 100644
 --- a/tests/ofproto-dpif.at
@@ -3665,6 +3677,33 @@ index ff628c362d..15dbfd60cf 100644
  
  AT_CHECK([ovs-appctl --format json --pretty dpif/offload/show], [0], [dnl
  {
+diff --git a/tests/ovs-ofctl.at b/tests/ovs-ofctl.at
+index c82af037e6..751a934e4a 100644
+--- a/tests/ovs-ofctl.at
++++ b/tests/ovs-ofctl.at
+@@ -3561,8 +3561,10 @@ dnl setup controller for br0 before starting the controller
+ AT_CHECK([ovs-vsctl -vsyslog:off set-controller br0 unix:testcontroller])
+ 
+ dnl then start listening on the '.snoop' connection
+-on_exit 'kill `cat ovs-ofctl-snoop.pid`'
+-AT_CHECK([ovs-ofctl -vsyslog:off --detach --no-chdir --pidfile=ovs-ofctl-snoop.pid snoop br0 > snoopbr0.txt 2>&1])
++on_exit 'test -e ovs-ofctl-snoop.pid && kill `cat ovs-ofctl-snoop.pid`'
++AT_CHECK([ovs-ofctl -vsyslog:off --detach --no-chdir \
++            --unixctl=snoop.ctl --pidfile=ovs-ofctl-snoop.pid \
++            snoop br0 > snoopbr0.txt 2>&1])
+ 
+ dnl finally start the controller
+ on_exit 'kill `cat ovs-testcontroller.pid`'
+@@ -3574,6 +3576,9 @@ OVS_WAIT_UNTIL([grep -E "OFPT_FEATURES_REQUEST" snoopbr0.txt >/dev/null 2>&1])
+ OVS_WAIT_UNTIL([grep -E "OFPT_FEATURES_REPLY" snoopbr0.txt >/dev/null 2>&1])
+ OVS_WAIT_UNTIL([grep -E "OFPT_SET_CONFIG" snoopbr0.txt >/dev/null 2>&1])
+ 
++AT_CHECK([ovs-appctl -t $(pwd)/snoop.ctl exit])
++OVS_WAIT_WHILE([test -e ovs-ofctl-snoop.pid])
++
+ dnl need to suppress the 'connection failed' WARN message in ovs-vswitchd
+ dnl because we need ovs-vswitchd to have the controller config before starting
+ dnl the controller to 'snoop' the OpenFlow messages from beginning
 diff --git a/tests/ovs-router.at b/tests/ovs-router.at
 index 27667d5bcb..b5282fd195 100644
 --- a/tests/ovs-router.at
