@@ -3544,7 +3544,7 @@ index 3b91925630..fca106584a 100644
 +    .get_netdev = tc_get_netdev,
  };
 diff --git a/lib/dpif-offload.c b/lib/dpif-offload.c
-index f6ab65e980..0b8be8b058 100644
+index f6ab65e980..6437bca427 100644
 --- a/lib/dpif-offload.c
 +++ b/lib/dpif-offload.c
 @@ -59,7 +59,7 @@ static const struct dpif_offload_class *base_dpif_offload_classes[] = {
@@ -3556,7 +3556,78 @@ index f6ab65e980..0b8be8b058 100644
  
  static int
  dpif_offload_register_provider__(const struct dpif_offload_class *class)
-@@ -527,7 +527,7 @@ dpif_offload_port_add(struct dpif *dpif, struct netdev *netdev,
+@@ -188,6 +188,25 @@ dpif_get_offload_provider_collection(const struct dpif *dpif)
+                       &dpif->offload_provider_collection);
+ }
+ 
++static struct dpif_offload_provider_collection*
++dpif_get_offload_provider_collection_with_ref(const struct dpif *dpif)
++{
++    struct dpif_offload_provider_collection *collection;
++
++    ovs_mutex_lock(&dpif_offload_mutex);
++
++    collection = ovsrcu_get(struct dpif_offload_provider_collection *,
++                            &dpif->offload_provider_collection);
++
++    if (!collection || !ovs_refcount_try_ref_rcu(&collection->ref_cnt)) {
++        collection = NULL;
++    }
++
++    ovs_mutex_unlock(&dpif_offload_mutex);
++
++    return collection;
++}
++
+ static void
+ dpif_attach_offload_provider_collection(
+     struct dpif *dpif, struct dpif_offload_provider_collection *collection)
+@@ -354,6 +373,26 @@ provider_collection_free_rcu(
+     free(collection);
+ }
+ 
++static void
++dpif_offload_unref_collection(
++    struct dpif_offload_provider_collection *collection)
++{
++    if (!collection) {
++        return;
++    }
++
++    /* Take dpif_offload_mutex so that, if collection->ref_cnt falls to
++     * zero, we can't get a new reference to 'collection' through the
++     * 'dpif_offload_providers' shash. */
++    ovs_mutex_lock(&dpif_offload_mutex);
++    if (ovs_refcount_unref_relaxed(&collection->ref_cnt) == 1) {
++        shash_find_and_delete(&dpif_offload_providers,
++                              collection->dpif_name);
++        ovsrcu_postpone(provider_collection_free_rcu, collection);
++    }
++    ovs_mutex_unlock(&dpif_offload_mutex);
++}
++
+ void
+ dpif_detach_offload_providers(struct dpif *dpif)
+ {
+@@ -361,16 +400,7 @@ dpif_detach_offload_providers(struct dpif *dpif)
+ 
+     collection = dpif_get_offload_provider_collection(dpif);
+     if (collection) {
+-        /* Take dpif_offload_mutex so that, if collection->ref_cnt falls to
+-         * zero, we can't get a new reference to 'collection' through the
+-         * 'dpif_offload_providers' shash. */
+-        ovs_mutex_lock(&dpif_offload_mutex);
+-        if (ovs_refcount_unref_relaxed(&collection->ref_cnt) == 1) {
+-            shash_find_and_delete(&dpif_offload_providers,
+-                                  collection->dpif_name);
+-            ovsrcu_postpone(provider_collection_free_rcu, collection);
+-        }
+-        ovs_mutex_unlock(&dpif_offload_mutex);
++        dpif_offload_unref_collection(collection);
+         ovsrcu_set(&dpif->offload_provider_collection, NULL);
+     }
+ }
+@@ -527,7 +557,7 @@ dpif_offload_port_add(struct dpif *dpif, struct netdev *netdev,
                        odp_port_t port_no)
  {
      struct dpif_offload_provider_collection *collection;
@@ -3565,7 +3636,133 @@ index f6ab65e980..0b8be8b058 100644
                                           netdev_get_name(netdev));
      struct dpif_offload *offload;
  
-@@ -773,21 +773,26 @@ dpif_offload_set_global_cfg(const struct ovsrec_open_vswitch *cfg)
+@@ -636,80 +666,78 @@ dpif_offload_port_offloaded_by(const struct dpif *dpif, odp_port_t port_no)
+     return offload_return;
+ }
+ 
++struct dpif_offload_dump_state {
++    const struct dpif_offload_provider_collection *collection;
++    struct dpif_offload *entry;
++    int error;
++};
++
+ void
+-dpif_offload_dump_start(struct dpif_offload_dump *dump,
+-                        const struct dpif *dpif)
++dpif_offload_dump_start(const struct dpif *dpif, void **statep)
+ {
+-    memset(dump, 0, sizeof *dump);
+-    dump->dpif = dpif;
++    struct dpif_offload_dump_state *state;
++
++    state = xzalloc(sizeof *state);
++    state->collection = dpif_get_offload_provider_collection_with_ref(dpif);
++    if (!state->collection) {
++        state->error = EIDRM;
++    }
++
++    *statep = state;
+ }
+ 
+ bool
+-dpif_offload_dump_next(struct dpif_offload_dump *dump,
+-                       struct dpif_offload **offload)
++dpif_offload_dump_next(void *state_, struct dpif_offload **offload)
+ {
+-    struct dpif_offload_provider_collection *collection;
++    struct dpif_offload_dump_state *state = state_;
+ 
+-    if (!offload || !dump || dump->error) {
++    if (!offload || !state || state->error || !state->collection) {
+         return false;
+     }
+ 
+-    collection = dpif_get_offload_provider_collection(dump->dpif);
+-    if (!collection) {
+-        return false;
+-    }
++    if (state->entry) {
++        struct dpif_offload *entry = state->entry;
+ 
+-    if (dump->state) {
+-        struct dpif_offload *offload_entry;
+-        bool valid_member = false;
+-
+-        /* In theory, list entries should not be removed.  However, in case
+-         * someone calls this during destruction and the node has disappeared,
+-         * we will return EIDRM (Identifier removed). */
+-        LIST_FOR_EACH (offload_entry, dpif_list_node, &collection->list) {
+-            if (offload_entry == dump->state) {
+-                valid_member = true;
+-                break;
+-            }
++        LIST_FOR_EACH_CONTINUE (entry, dpif_list_node,
++                                &state->collection->list) {
++            state->entry = entry;
++            *offload = entry;
++            return true;
+         }
+ 
+-        if (valid_member) {
+-            offload_entry = dump->state;
+-
+-            LIST_FOR_EACH_CONTINUE (offload_entry, dpif_list_node,
+-                                    &collection->list) {
+-                *offload = offload_entry;
+-                dump->state = offload_entry;
+-                return true;
+-            }
+-
+-            dump->error = EOF;
+-        } else {
+-            dump->error = EIDRM;
+-        }
++        state->error = EOF;
+     } else {
+         /* Get the first entry in the list. */
+-        struct dpif_offload *offload_entry;
++        struct dpif_offload *entry;
+ 
+-        LIST_FOR_EACH (offload_entry, dpif_list_node, &collection->list) {
++        LIST_FOR_EACH (entry, dpif_list_node, &state->collection->list) {
+             break;
+         }
+ 
+-        if (offload_entry) {
+-            *offload = offload_entry;
+-            dump->state = offload_entry;
++        if (entry) {
++            state->entry = entry;
++            *offload = entry;
+         } else {
+-            dump->error = EOF;
++            state->error = EOF;
+         }
+     }
+ 
+-    return !dump->error;
++    return !state->error;
+ }
+ 
+ int
+-dpif_offload_dump_done(struct dpif_offload_dump *dump)
++dpif_offload_dump_done(void *state_)
+ {
+-    return dump->error == EOF ? 0 : dump->error;
++    struct dpif_offload_dump_state *state = state_;
++    int error;
++
++    dpif_offload_unref_collection(
++        CONST_CAST(struct dpif_offload_provider_collection *,
++                   state->collection));
++    error = state->error == EOF ? 0 : state->error;
++    free(state);
++
++    return error;
+ }
+ 
+ void
+@@ -773,21 +801,26 @@ dpif_offload_set_global_cfg(const struct ovsrec_open_vswitch *cfg)
          }
      }
  
@@ -3599,6 +3796,55 @@ index f6ab65e980..0b8be8b058 100644
              }
          }
      }
+diff --git a/lib/dpif-offload.h b/lib/dpif-offload.h
+index 65bba2f0ed..f7328db9a7 100644
+--- a/lib/dpif-offload.h
++++ b/lib/dpif-offload.h
+@@ -23,13 +23,6 @@
+ struct dpif_offload_class;
+ struct dpif_offload;
+ 
+-/* Structure used by the dpif_offload_dump_* functions. */
+-struct dpif_offload_dump {
+-    const struct dpif *dpif;
+-    int error;
+-    void *state;
+-};
+-
+ /* Definition of the DPIF offload implementation type.
+  *
+  * The 'DPIF_OFFLOAD_IMPL_FLOWS_DPIF_SYNCED' implementation has a single view,
+@@ -64,10 +57,9 @@ const char *dpif_offload_type(const struct dpif_offload *);
+ bool dpif_offload_get_debug(const struct dpif_offload *, struct ds *,
+                             struct json *);
+ void dpif_offload_flow_flush(struct dpif *);
+-void dpif_offload_dump_start(struct dpif_offload_dump *, const struct dpif *);
+-bool dpif_offload_dump_next(struct dpif_offload_dump *,
+-                            struct dpif_offload **);
+-int dpif_offload_dump_done(struct dpif_offload_dump *);
++void dpif_offload_dump_start(const struct dpif *, void **statep);
++bool dpif_offload_dump_next(void *state, struct dpif_offload **);
++int dpif_offload_dump_done(void *state);
+ uint64_t dpif_offload_flow_count(const struct dpif *);
+ uint64_t dpif_offload_flow_count_by_impl(const struct dpif *,
+                                          enum dpif_offload_impl_type);
+@@ -94,11 +86,11 @@ enum dpif_offload_impl_type dpif_offload_get_impl_type_by_class(
+  *
+  * If you break out of the loop, then you need to free the dump structure by
+  * hand using dpif_offload_dump_done(). */
+-#define DPIF_OFFLOAD_FOR_EACH(DPIF_OFFLOAD, DUMP, DPIF)  \
+-    for (dpif_offload_dump_start(DUMP, DPIF);            \
+-         (dpif_offload_dump_next(DUMP, &DPIF_OFFLOAD)    \
+-          ? true                                         \
+-          : (dpif_offload_dump_done(DUMP), false));      \
++#define DPIF_OFFLOAD_FOR_EACH(DPIF_OFFLOAD, DUMP_STATE, DPIF)  \
++    for (dpif_offload_dump_start(DPIF, &DUMP_STATE);           \
++         (dpif_offload_dump_next(DUMP_STATE, &DPIF_OFFLOAD)    \
++          ? true                                               \
++          : (dpif_offload_dump_done(DUMP_STATE), false));      \
+         )
+ 
+ struct dpif_offload_port {
 diff --git a/lib/dummy.h b/lib/dummy.h
 index 266c200c36..e5c9d4071c 100644
 --- a/lib/dummy.h
@@ -3652,6 +3898,38 @@ index 4afa215154..3815cfed5b 100644
      rc->monitors[idx] = rc->monitors[--rc->n_monitors];
  }
  
+diff --git a/ofproto/ofproto-dpif.c b/ofproto/ofproto-dpif.c
+index 523b603754..a02afe8ef3 100644
+--- a/ofproto/ofproto-dpif.c
++++ b/ofproto/ofproto-dpif.c
+@@ -6712,12 +6712,12 @@ done:
+ static void
+ dpif_offload_show_backer_text(const struct dpif_backer *backer, struct ds *ds)
+ {
+-    struct dpif_offload_dump dump;
+     struct dpif_offload *offload;
++    void *dump_state;
+ 
+     ds_put_format(ds, "%s:\n", dpif_name(backer->dpif));
+ 
+-    DPIF_OFFLOAD_FOR_EACH (offload, &dump, backer->dpif) {
++    DPIF_OFFLOAD_FOR_EACH (offload, dump_state, backer->dpif) {
+         ds_put_format(ds, "  %s\n", dpif_offload_type(offload));
+         dpif_offload_get_debug(offload, ds, NULL);
+     }
+@@ -6730,10 +6730,10 @@ dpif_offload_show_backer_json(struct json *backers,
+     struct json *json_providers = json_object_create();
+     struct json *json_priority = json_array_create_empty();
+     struct json *json_backer = json_object_create();
+-    struct dpif_offload_dump dump;
+     struct dpif_offload *offload;
++    void *dump_state;
+ 
+-    DPIF_OFFLOAD_FOR_EACH (offload, &dump, backer->dpif) {
++    DPIF_OFFLOAD_FOR_EACH (offload, dump_state, backer->dpif) {
+         struct json *debug_data = json_object_create();
+ 
+         json_array_add(json_priority,
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
 index ff628c362d..15dbfd60cf 100644
 --- a/tests/ofproto-dpif.at
