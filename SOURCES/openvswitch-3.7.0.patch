@@ -1,3 +1,18 @@
+diff --git a/.cirrus.yml b/.cirrus.yml
+index d49fbf02e0..cfbb0ff4dd 100644
+--- a/.cirrus.yml
++++ b/.cirrus.yml
+@@ -2,8 +2,8 @@ freebsd_build_task:
+ 
+   freebsd_instance:
+     matrix:
+-      image_family: freebsd-13-5-snap
+-      image_family: freebsd-14-3-snap
++      image_family: freebsd-13-5
++      image_family: freebsd-14-3
+     cpu: 4
+     memory: 4G
+ 
 diff --git a/.github/workflows/build-and-test.yml b/.github/workflows/build-and-test.yml
 index 96a503ca55..5f9e337de4 100644
 --- a/.github/workflows/build-and-test.yml
@@ -194,6 +209,19 @@ index 34abdb9e4c..70d3e5330b 100755
  
          if re.match(r".*[F|f]ailed to initiate connection.*", pout):
              vlog.err('Failed to initiate connection through'
+diff --git a/lib/automake.mk b/lib/automake.mk
+index 9634bed7ba..c6e988906f 100644
+--- a/lib/automake.mk
++++ b/lib/automake.mk
+@@ -26,7 +26,7 @@ if HAVE_LD_AVX512_GOOD
+ # compiler to use the ISA features required for the ISA optimized code-paths.
+ # Use LDFLAGS to compile only static library of this code, as it should be
+ # statically linked into vswitchd even if vswitchd is a shared build.
+-lib_LTLIBRARIES += lib/libopenvswitchavx512.la
++noinst_LTLIBRARIES += lib/libopenvswitchavx512.la
+ lib_libopenvswitch_la_LIBADD += lib/libopenvswitchavx512.la
+ lib_libopenvswitchavx512_la_CFLAGS = \
+ 	-mavx512f \
 diff --git a/lib/dpdk.c b/lib/dpdk.c
 index 4dd5e97895..d27b95cd9a 100644
 --- a/lib/dpdk.c
@@ -4182,7 +4210,7 @@ index 523b603754..a02afe8ef3 100644
  
          json_array_add(json_priority,
 diff --git a/rhel/openvswitch-fedora.spec.in b/rhel/openvswitch-fedora.spec.in
-index 38fbee7278..39abb4daf5 100644
+index 38fbee7278..9fb40d355c 100644
 --- a/rhel/openvswitch-fedora.spec.in
 +++ b/rhel/openvswitch-fedora.spec.in
 @@ -70,6 +70,11 @@ BuildRequires: /usr/bin/sphinx-build-3
@@ -4197,6 +4225,14 @@ index 38fbee7278..39abb4daf5 100644
  %endif
  %if %{with dpdk}
  BuildRequires: libpcap-devel numactl-devel
+@@ -434,7 +439,6 @@ fi
+ %{_includedir}/openvswitch/*
+ %{_includedir}/openflow/*
+ %exclude %{_libdir}/*.la
+-%exclude %{_libdir}/*.a
+ 
+ %if 0%{?rhel} > 7 || (0%{?fedora} > 28 && 0%{?fedora} < 41)
+ %files -n network-scripts-%{name}
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
 index ff628c362d..15dbfd60cf 100644
 --- a/tests/ofproto-dpif.at

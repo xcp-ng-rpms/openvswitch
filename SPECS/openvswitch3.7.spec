@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.7%{?dist}
+Release: 0.8%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,13 @@ exit 0
 %endif
 
 %changelog
+* Fri Feb 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.8
+- Merging upstream branch-3.7 [RH git: c67d84ba95]
+    Commit list:
+    1d6a519172 cirrus: Use FreeBSD release images instead of stable snapshots.
+    97b3a35077 automake: Don't install the libopenvswitchavx512.
+
+
 * Fri Feb 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.7
 - Merging upstream branch-3.7 [RH git: 969c34df6e]
     Commit list:
