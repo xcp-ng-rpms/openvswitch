@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.6%{?dist}
+Release: 0.7%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,18 @@ exit 0
 %endif
 
 %changelog
+* Fri Feb 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.7
+- Merging upstream branch-3.7 [RH git: 969c34df6e]
+    Commit list:
+    fcf733472c dpif-netdev: Fix per-datapath initialization using once framework.
+    52e740da78 dpif: Always call dpif_offload_set_config().
+    dbfe60a322 fedora: Fix package install on Fedora 43.
+    0062d99d46 ipsec: libreswan: Consider active only when child SA is established. ()
+    122e79a497 ipsec: libreswan: Silence warning about overriding auto=route in v5.3.
+    f3d704541b ipsec: libreswan: Fix warning for obsolete keyingtries in v5.
+    59c56bcf6e system-ipsec.at: Use natural sorting for SA list.
+
+
 * Mon Feb 02 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.6
 - Merging upstream branch-3.7 [RH git: 90a8d3bae8]
     Commit list:

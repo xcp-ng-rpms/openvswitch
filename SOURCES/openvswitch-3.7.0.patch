@@ -1,3 +1,16 @@
+diff --git a/.github/workflows/build-and-test.yml b/.github/workflows/build-and-test.yml
+index 96a503ca55..5f9e337de4 100644
+--- a/.github/workflows/build-and-test.yml
++++ b/.github/workflows/build-and-test.yml
+@@ -670,7 +670,7 @@ jobs:
+   build-linux-rpm:
+     name: linux rpm fedora
+     runs-on: ubuntu-latest
+-    container: fedora:41
++    container: fedora:43
+     timeout-minutes: 30
+ 
+     strategy:
 diff --git a/NEWS b/NEWS
 index c14bb45867..e4b355460a 100644
 --- a/NEWS
@@ -16,6 +29,171 @@ index c14bb45867..e4b355460a 100644
     - OVSDB-IDL:
       * New ovsdb_idl_txn_assert_read_only() interface to mark transactions
         as read-only and trigger assertion failure when application attempts
+diff --git a/ipsec/ovs-monitor-ipsec.in b/ipsec/ovs-monitor-ipsec.in
+index 34abdb9e4c..70d3e5330b 100755
+--- a/ipsec/ovs-monitor-ipsec.in
++++ b/ipsec/ovs-monitor-ipsec.in
+@@ -77,7 +77,8 @@ RECONCILIATION_INTERVAL = 15  # seconds
+ TIMEOUT_EXPIRED = 137  # Exit code for a SIGKILL (128 + 9).
+ 
+ 
+-def run_command(args, description=None, warn_on_failure=True):
++def run_command(args, description=None,
++                warn_on_failure=True, stderr_ignore=[]):
+     """ This function runs the process args[0] with args[1:] arguments
+     and returns a tuple: return-code, stdout, stderr. """
+ 
+@@ -99,6 +100,9 @@ def run_command(args, description=None, warn_on_failure=True):
+         proc.kill()
+         ret = TIMEOUT_EXPIRED
+ 
++    for ignore in stderr_ignore:
++        perr = perr.replace(ignore.encode(), b'')
++
+     if (proc.returncode or perr) and warn_on_failure:
+         vlog.warn("Failed to %s; exit code: %d"
+                   % (description, proc.returncode))
+@@ -417,7 +421,6 @@ conn %default
+ """
+ 
+     CONN_CONF_BASE = """\
+-    keyingtries=%forever
+     type=transport
+     auto=route
+ """
+@@ -494,6 +497,8 @@ conn prevent_unencrypted_vxlan
+             # With v5, LibreSWAN removed the auto command, however, it is
+             # still required for older versions
+             self.IPSEC_AUTO.append("auto")
++            # keyingtries is obsolete in v5 and has no effect.
++            self.CONN_CONF_BASE += "    keyingtries=%forever\n"
+ 
+         if version >= 4:
+             ipsec_d = args.ipsec_d if args.ipsec_d else "/var/lib/ipsec/nss"
+@@ -668,57 +673,47 @@ conn prevent_unencrypted_vxlan
+                 self.conns_not_active["added"].pop(conn, None)
+                 self.conns_not_active["started"].pop(conn, None)
+ 
+-            # Remove connections that didn't become active after --start
+-            # or an explicit --up.
+-            for conn in list(loaded):
++            # Remove all the loaded or active but not desired connections.
++            for conn in (loaded | active) - desired:
++                self._delete_ipsec_connection(conn, "is outdated")
++                loaded.discard(conn)
++                active.discard(conn)
++
++            # Check all the loaded but not active connections.
++            for conn in loaded - active:
++                # Remove connections that didn't become active after --start
++                # or an explicit --up.
+                 started = self.conns_not_active["started"].get(conn, None)
+ 
+                 if started and self.conn_should_reconcile(started):
+                     self._delete_ipsec_connection(conn, "is defunct")
+-                    loaded.remove(conn)
+-
+-            # Remove all the loaded or active but not desired connections.
+-            for conn in loaded | active:
+-                if conn not in desired:
+-                    self._delete_ipsec_connection(conn, "is outdated")
+                     loaded.discard(conn)
+-                    active.discard(conn)
+-
+-            # If not all desired are loaded, remove all the loaded and
+-            # active for this tunnel and re-load only the desired ones.
+-            # Need to do that, because connections for the same tunnel
+-            # may share SAs.  If one is loaded and the other is not,
+-            # it means the second one failed, so the shared SA may be in
+-            # a broken state.
+-            if desired != loaded:
+-                for conn in loaded | active:
+-                    self._delete_ipsec_connection(conn, "is half-loaded")
+-                    loaded.discard(conn)
+-                    active.discard(conn)
+-
+-                for conn in desired:
+-                    # Start (add + up) outgoing connections and only add
+-                    # incoming ones.  If the other side will not initiate
+-                    # the connection and it will not become active, we'll
+-                    # bring it up during the next refresh.
+-                    if re.match(r".*-in-\d+$", conn):
+-                        vlog.info("Adding ipsec connection %s" % conn)
+-                        self._start_ipsec_connection(conn, "add")
+-                    else:
+-                        vlog.info("Starting ipsec connection %s" % conn)
+-                        self._start_ipsec_connection(conn, "start")
+-            else:
+-                # Ask pluto to bring UP connections that are loaded,
+-                # but not active for some reason.
+-                #
+-                # desired == loaded and desired >= loaded + active,
+-                # so loaded >= active
+-                for conn in loaded - active:
+-                    added = self.conns_not_active["added"].get(conn, None)
+ 
+-                    if added and self.conn_should_reconcile(added):
+-                        vlog.info("Bringing up ipsec connection %s" % conn)
+-                        self._start_ipsec_connection(conn, "up")
++                # Bring UP connections that were loaded but didn't become
++                # active on their own.
++                added = self.conns_not_active["added"].get(conn, None)
++
++                if added and self.conn_should_reconcile(added):
++                    vlog.info("Bringing up ipsec connection %s" % conn)
++                    self._start_ipsec_connection(conn, "up")
++
++                # Check for connections that were active bafore, but no longer.
++                if not added and not started:
++                    vlog.info("Connection %s went down, bringing it up" % conn)
++                    self._start_ipsec_connection(conn, "up")
++
++            # Load all the desired but not loaded yet connections.
++            for conn in desired - loaded:
++                # Start (add + up) outgoing connections and only add
++                # incoming ones.  If the other side will not initiate
++                # the connection and it will not become active, we'll
++                # bring it up during the next refresh.
++                if re.match(r".*-in-\d+$", conn):
++                    vlog.info("Adding ipsec connection %s" % conn)
++                    self._start_ipsec_connection(conn, "add")
++                else:
++                    vlog.info("Starting ipsec connection %s" % conn)
++                    self._start_ipsec_connection(conn, "start")
+ 
+         # Update shunt policy if changed
+         if monitor.conf_in_use["skb_mark"] != monitor.conf["skb_mark"]:
+@@ -801,7 +796,8 @@ conn prevent_unencrypted_vxlan
+         return conns
+ 
+     def get_active_conns(self):
+-        return self.get_conns_from_status(r"#\d+: .*\"(.*)\".*")
++        return self.get_conns_from_status(
++            r"#\d+: .*\"(.*)\".*esp[.:][0-9a-f]+@.*")
+ 
+     def get_loaded_conns(self):
+         return self.get_conns_from_status(
+@@ -876,12 +872,19 @@ conn prevent_unencrypted_vxlan
+ 
+     def _start_ipsec_connection(self, conn, action):
+         asynchronous = [] if action == "add" else ["--asynchronous"]
++        # Some versions of Libreswan (5.3+) warn that 'auto' in the config
++        # file is not taken into account while calling ipsec add/start.
++        # This is expected and we shouldn't warn users about this as the
++        # message itself is a bit misleading:
++        #   https://github.com/libreswan/libreswan/issues/2584
++        ignore = ["conn %s: overriding auto=route with auto=add\n" % conn]
+         ret, pout, perr = run_command(self.IPSEC_AUTO +
+                                       ["--config", self.ROOT_IPSEC_CONF,
+                                       "--ctlsocket", self.IPSEC_CTL,
+                                       "--" + action,
+                                       *asynchronous, conn],
+-                                      "%s %s" % (action, conn))
++                                      "%s %s" % (action, conn),
++                                      stderr_ignore=ignore)
+ 
+         if re.match(r".*[F|f]ailed to initiate connection.*", pout):
+             vlog.err('Failed to initiate connection through'
 diff --git a/lib/dpdk.c b/lib/dpdk.c
 index 4dd5e97895..d27b95cd9a 100644
 --- a/lib/dpdk.c
@@ -29,6 +207,65 @@ index 4dd5e97895..d27b95cd9a 100644
          struct dpdk_exclusive_options_map *popt = &excl_opts[i];
  
          for (scan = 0; scan < MAX_DPDK_EXCL_OPTS
+diff --git a/lib/dpif-netdev.c b/lib/dpif-netdev.c
+index 6fabdcab7e..6dd55a0a57 100644
+--- a/lib/dpif-netdev.c
++++ b/lib/dpif-netdev.c
+@@ -327,6 +327,7 @@ struct dp_netdev {
+ 
+     struct seq *reconfigure_seq;
+     uint64_t last_reconfigure_seq;
++    struct ovsthread_once once_set_config;
+ 
+     /* Cpu mask for pin of pmd threads. */
+     char *pmd_cmask;
+@@ -1804,6 +1805,7 @@ create_dp_netdev(const char *name, const struct dpif_class *class,
+ 
+     dp->reconfigure_seq = seq_create();
+     dp->last_reconfigure_seq = seq_read(dp->reconfigure_seq);
++    dp->once_set_config = (struct ovsthread_once) OVSTHREAD_ONCE_INITIALIZER;
+ 
+     /* Init meter resources. */
+     cmap_init(&dp->meters);
+@@ -1943,6 +1945,7 @@ dp_netdev_free(struct dp_netdev *dp)
+ 
+ 
+     seq_destroy(dp->reconfigure_seq);
++    ovsthread_once_destroy(&dp->once_set_config);
+ 
+     seq_destroy(dp->port_seq);
+     hmap_destroy(&dp->ports);
+@@ -4394,7 +4397,6 @@ dpif_netdev_set_config(struct dpif *dpif, const struct smap *other_config)
+     uint32_t rebalance_load, rebalance_improve;
+     bool log_autolb = false;
+     enum sched_assignment_type pmd_rxq_assign_type;
+-    static bool first_set_config = true;
+ 
+     tx_flush_interval = smap_get_int(other_config, "tx-flush-interval",
+                                      DEFAULT_TX_FLUSH_INTERVAL);
+@@ -4543,16 +4545,17 @@ dpif_netdev_set_config(struct dpif *dpif, const struct smap *other_config)
+     set_pmd_auto_lb(dp, autolb_state, log_autolb);
+ 
+     bool sleep_changed = set_all_pmd_max_sleeps(dp, other_config);
+-    if (first_set_config || sleep_changed) {
+-        log_all_pmd_sleeps(dp);
+-    }
+ 
+-    if (first_set_config) {
++    if (ovsthread_once_start(&dp->once_set_config)) {
++        log_all_pmd_sleeps(dp);
+         dpif_offload_datapath_register_flow_unreference_cb(
+             dpif, offload_flow_reference_unreference_cb);
++
++        ovsthread_once_done(&dp->once_set_config);
++    } else if (sleep_changed) {
++        log_all_pmd_sleeps(dp);
+     }
+ 
+-    first_set_config = false;
+     return 0;
+ }
+ 
 diff --git a/lib/dpif-offload-dpdk-netdev.c b/lib/dpif-offload-dpdk-netdev.c
 index 9a66bd4137..d61365ed76 100644
 --- a/lib/dpif-offload-dpdk-netdev.c
@@ -3845,6 +4082,20 @@ index 65bba2f0ed..f7328db9a7 100644
          )
  
  struct dpif_offload_port {
+diff --git a/lib/dpif.c b/lib/dpif.c
+index 88b5edfad5..cab5884254 100644
+--- a/lib/dpif.c
++++ b/lib/dpif.c
+@@ -1609,8 +1609,8 @@ dpif_set_config(struct dpif *dpif, const struct smap *cfg)
+         if (error) {
+             log_operation(dpif, "set_config", error);
+         }
+-        dpif_offload_set_config(dpif, cfg);
+     }
++    dpif_offload_set_config(dpif, cfg);
+ 
+     return error;
+ }
 diff --git a/lib/dummy.h b/lib/dummy.h
 index 266c200c36..e5c9d4071c 100644
 --- a/lib/dummy.h
@@ -3930,6 +4181,22 @@ index 523b603754..a02afe8ef3 100644
          struct json *debug_data = json_object_create();
  
          json_array_add(json_priority,
+diff --git a/rhel/openvswitch-fedora.spec.in b/rhel/openvswitch-fedora.spec.in
+index 38fbee7278..39abb4daf5 100644
+--- a/rhel/openvswitch-fedora.spec.in
++++ b/rhel/openvswitch-fedora.spec.in
+@@ -70,6 +70,11 @@ BuildRequires: /usr/bin/sphinx-build-3
+ BuildRequires: procps-ng
+ %if %{with libcapng}
+ BuildRequires: libcap-ng libcap-ng-devel
++Provides: user(openvswitch)
++Provides: group(openvswitch)
++%if %{with dpdk}
++Provides: group(hugetlbfs)
++%endif
+ %endif
+ %if %{with dpdk}
+ BuildRequires: libpcap-devel numactl-devel
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
 index ff628c362d..15dbfd60cf 100644
 --- a/tests/ofproto-dpif.at
@@ -4041,6 +4308,138 @@ index 27667d5bcb..b5282fd195 100644
  OVS_VSWITCHD_STOP
  AT_CLEANUP
  
+diff --git a/tests/system-ipsec.at b/tests/system-ipsec.at
+index b0c77a8e41..6ba13abb12 100644
+--- a/tests/system-ipsec.at
++++ b/tests/system-ipsec.at
+@@ -137,7 +137,7 @@ dnl
+ dnl Get numbers of all the currently active SAs.
+ m4_define([IPSEC_SA_LIST], [
+     AT_CHECK([ipsec --rundir $ovs_base/$1 status > $2.status])
+-    AT_CHECK([grep -oE '#[0-9]+:' $2.status | sort -u], [0], [stdout])
++    AT_CHECK([grep -oE '#[0-9]+:' $2.status | sort -uV], [0], [stdout])
+     AT_CHECK([mv stdout $2])
+ ])
+ 
+@@ -559,7 +559,7 @@ m4_for([id], [1], 5, [1], [
+ 
+ dnl Check that none of the connections were marked for reconciliation yet.
+ dnl It should take at least 15 seconds for this to happen.
+-AT_CHECK([grep -E 'half-loaded|defunct' left/ovs-monitor-ipsec.log], [1])
++AT_CHECK([grep 'defunct' left/ovs-monitor-ipsec.log], [1])
+ AT_CHECK([grep 'Bringing up' left/ovs-monitor-ipsec.log], [1])
+ dnl But we should eventually attempt to reconcile the original 'tun' tunnel.
+ OVS_WAIT_UNTIL([grep -qE 'Bringing up ipsec connection tun-[[io]]' \
+@@ -604,7 +604,7 @@ m4_for([id], [1], 5, [1], [
+ 
+ dnl Check that none of the connections were marked for reconciliation yet.
+ dnl It should take at least 15 seconds for this to happen.
+-AT_CHECK([grep -E 'half-loaded|defunct' left/ovs-monitor-ipsec.log], [1])
++AT_CHECK([grep 'defunct' left/ovs-monitor-ipsec.log], [1])
+ AT_CHECK([grep 'Bringing up' left/ovs-monitor-ipsec.log], [1])
+ dnl But we should eventually attempt to reconcile the original 'tun' tunnel.
+ OVS_WAIT_UNTIL([grep -qE 'Bringing up ipsec connection tun-[[io]]' \
+@@ -891,7 +891,7 @@ m4_for([LEFT], [1], NODES, [1], [
+ 
+ dnl These are not necessary, but nice to have in the test log in
+ dnl order to spot pluto failures during the test.
+-on_exit "grep -E 'Timed out|outdated|half-loaded|defunct' \
++on_exit "grep -E 'Timed out|outdated|defunct|went down' \
+             $ovs_base/node-*/ovs-monitor-ipsec.log"
+ on_exit "grep -E 'ABORT|ERROR' $ovs_base/node-*/pluto.log"
+ 
+@@ -935,16 +935,25 @@ dnl some connections may not become active until we revive it.  Some
+ dnl connections may also never become active due to bugs in libreswan 4.x.
+ WAIT_FOR_LOADED_CONNS()
+ 
++dnl Next section will check connectivity between all the nodes.
++dnl Different versions of Libreswan 4.x have issues where connections
++dnl are not being correctly established or never become active in a
++dnl way that can not be mitigated from ovs-monitor-ipsec or the test.
++dnl So, only checking connectivity for Libreswan 3- or 5+.
++dnl Skipping in the middle of the test, so test can still fail while
++dnl testing with Libreswan 4, if the first half fails.
++AT_SKIP_IF([ipsec --version 2>&1 | grep -q 'Libreswan 4\.'])
++
++dnl Wait for the monitor and pluto to be done with all the connections.
++OVS_WAIT_UNTIL([grep -q 'all(19) configured tunnels are Up' \
++                    $ovs_base/node-1/ovs-monitor-ipsec.log])
++
+ AT_CHECK([ipsec auto --help], [ignore], [ignore], [stderr])
+ auto=auto
+ if test -s stderr; then
+     auto=
+ fi
+ 
+-dnl Wait for the monitor to be done with all the connections.
+-OVS_WAIT_UNTIL([grep -q 'all(19) configured tunnels are Up' \
+-                    $ovs_base/node-1/ovs-monitor-ipsec.log])
+-
+ dnl Remove connections for two tunnels.  One fully and one partially.
+ AT_CHECK([ipsec $auto --ctlsocket $ovs_base/node-1/pluto.ctl \
+                       --config $ovs_base/node-1/ipsec.conf \
+@@ -963,15 +972,6 @@ OVS_WAIT_UNTIL([grep -qE 'tun-[[25]] .*need to reconcile' \
+ dnl Wait for all the connections to be loaded back.
+ WAIT_FOR_LOADED_CONNS()
+ 
+-dnl Next section will check connectivity between all the nodes.
+-dnl Different versions of Libreswan 4.x have issues where connections
+-dnl are not being correctly established or never become active in a
+-dnl way that can not be mitigated from ovs-monitor-ipsec or the test.
+-dnl So, only checking connectivity for Libreswan 3- or 5+.
+-dnl Skipping in the middle of the test, so test can still fail while
+-dnl testing with Libreswan 4, if the first half fails.
+-AT_SKIP_IF([ipsec --version 2>&1 | grep -q 'Libreswan 4\.'])
+-
+ dnl Turn off IPv6 and add static ARP entries for all namespaces to avoid
+ dnl any broadcast / multicast traffic that would otherwise be multiplied
+ dnl by each node creating a traffic storm.  Add specific OpenFlow rules
+diff --git a/tests/system-offloads-traffic.at b/tests/system-offloads-traffic.at
+index ba1f9fe5e8..13a8054a40 100644
+--- a/tests/system-offloads-traffic.at
++++ b/tests/system-offloads-traffic.at
+@@ -93,6 +93,41 @@ AT_CHECK([ovs-appctl upcall/show | grep -E "offloaded flows : [[1-9]]"], [0], [i
+ OVS_TRAFFIC_VSWITCHD_STOP
+ AT_CLEANUP
+ 
++AT_SETUP([offloads - tc-policy configuration])
++OVS_TRAFFIC_VSWITCHD_START([], [],
++  [-- set Open_vSwitch . other_config:hw-offload=true \
++   -- set Open_vSwitch . other_config:tc-policy=skip_hw])
++
++AT_CHECK([ovs-ofctl add-flow br0 "actions=normal"])
++
++ADD_NAMESPACES(at_ns0, at_ns1)
++
++ADD_VETH(p0, at_ns0, br0, "10.1.1.1/24")
++ADD_VETH(p1, at_ns1, br0, "10.1.1.2/24")
++AT_CHECK([ovs-appctl dpctl/dump-flows], [0], [ignore])
++
++NS_CHECK_EXEC([at_ns0], [ping -q -c 10 -i 0.1 -W 2 10.1.1.2 | FORMAT_PING], [0], [dnl
++10 packets transmitted, 10 received, 0% packet loss, time 0ms
++])
++
++AT_CHECK([ovs-appctl dpctl/dump-flows | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
++in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
++in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
++])
++
++AT_CHECK([ovs-appctl dpctl/dump-flows type=ovs | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [])
++
++AT_CHECK([ovs-appctl dpctl/dump-flows type=tc,offloaded | grep "eth_type(0x0800)" | DUMP_CLEAN_SORTED], [0], [dnl
++in_port(2),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
++in_port(3),eth(macs),eth_type(0x0800),ipv4(frag=no), packets:9, bytes:756, used:0.001s, actions:output
++])
++
++AT_CHECK([ovs-appctl upcall/show | grep -E "offloaded flows : [[1-9]]"], [0], [ignore])
++AT_CHECK([tc -d filter show dev ovs-p0 ingress | grep -q "skip_hw"])
++
++OVS_TRAFFIC_VSWITCHD_STOP
++AT_CLEANUP
++
+ AT_SETUP([offloads - set ingress_policing_rate and ingress_policing_burst - offloads disabled])
+ AT_KEYWORDS([ingress_policing])
+ OVS_CHECK_TC_QDISC()
 diff --git a/vswitchd/vswitch.xml b/vswitchd/vswitch.xml
 index 29ad9c13e5..b7a5afc0a5 100644
 --- a/vswitchd/vswitch.xml
