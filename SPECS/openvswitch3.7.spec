@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.10%{?dist}
+Release: 0.11%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,13 @@ exit 0
 %endif
 
 %changelog
+* Tue Feb 10 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.11
+- Merging upstream branch-3.7 [RH git: 8c90b4ee54]
+    Commit list:
+    1d57509ef1 treewide: Fix discarded-qualifers warnings.
+    431efcdfcc ovsdb-server: Fix relay remotes string check.
+
+
 * Mon Feb 09 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.10
 - Merging upstream branch-3.7 [RH git: 38ad6006ec]
     Commit list:
