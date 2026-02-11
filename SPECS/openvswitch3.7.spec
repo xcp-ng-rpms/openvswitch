@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.11%{?dist}
+Release: 0.12%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,16 @@ exit 0
 %endif
 
 %changelog
+* Tue Feb 10 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.12
+- Merging upstream branch-3.7 [RH git: ddf2f84483]
+    Commit list:
+    8c6ebf895f bond: Fix next_rebalance offset calculation.
+    f43bde3d50 rhel: Avoid warning about missing .la with Fedora spec.
+    37e41460eb rhel: Remove kernel mentions from the Fedora spec.
+    a47cf0e6b0 rhel: Don't ship network scripts on RHEL 9+ and Fedora 41+.
+    88f3274933 rhel: Don't build network scripts package on RHEL 9+ with Fedora spec.
+
+
 * Tue Feb 10 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.11
 - Merging upstream branch-3.7 [RH git: 8c90b4ee54]
     Commit list:

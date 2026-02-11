@@ -4982,6 +4982,22 @@ index 4470bca543..c8eb26b2a9 100644
      bool or_later = false;
      int len = strlen(arg);
  
+diff --git a/ofproto/bond.c b/ofproto/bond.c
+index 584c38f077..ef481a3604 100644
+--- a/ofproto/bond.c
++++ b/ofproto/bond.c
+@@ -468,9 +468,9 @@ bond_reconfigure(struct bond *bond, const struct bond_settings *s)
+              * we can skip triggering the rest of the port reconfiguration. */
+             if (bond->next_rebalance) {
+                 long long int old_start_time =
+-                    bond->next_rebalance - s->rebalance_interval;
++                    bond->next_rebalance - bond->rebalance_interval;
+                 bond->next_rebalance =
+-                    old_start_time + bond->rebalance_interval;
++                    old_start_time + s->rebalance_interval;
+             }
+         } else {
+             /* When the bond is doing a disable/enable of the rebalance
 diff --git a/ofproto/ofproto-dpif-xlate.c b/ofproto/ofproto-dpif-xlate.c
 index f2db4723bd..de82e2903a 100644
 --- a/ofproto/ofproto-dpif-xlate.c
@@ -5080,10 +5096,21 @@ index 86b0dc7b81..7c3a5ef117 100644
  }
  
 diff --git a/rhel/openvswitch-fedora.spec.in b/rhel/openvswitch-fedora.spec.in
-index 38fbee7278..9fb40d355c 100644
+index 38fbee7278..87e7025b37 100644
 --- a/rhel/openvswitch-fedora.spec.in
 +++ b/rhel/openvswitch-fedora.spec.in
-@@ -70,6 +70,11 @@ BuildRequires: /usr/bin/sphinx-build-3
+@@ -16,10 +16,6 @@
+ # and should not be used otherwise (these tests require root privileges).
+ # These tests can be executed, for example, via:
+ #    rpmbuild -rb --with check_datapath_kernel openvswitch-fedora.src.rpm
+-#
+-# These tests will use the currently installed OVS kernel modules.
+-
+-#%define kernel 2.6.40.4-5.fc15.x86_64
+ 
+ # If libcap-ng isn't available and there is no need for running OVS
+ # as regular user, specify the '--without libcapng'
+@@ -70,6 +66,11 @@ BuildRequires: /usr/bin/sphinx-build-3
  BuildRequires: procps-ng
  %if %{with libcapng}
  BuildRequires: libcap-ng libcap-ng-devel
@@ -5095,16 +5122,70 @@ index 38fbee7278..9fb40d355c 100644
  %endif
  %if %{with dpdk}
  BuildRequires: libpcap-devel numactl-devel
-@@ -434,7 +439,6 @@ fi
+@@ -85,8 +86,6 @@ BuildRequires: libbpf-devel systemtap-sdt-devel
+ BuildRequires: unbound unbound-devel
+ 
+ Requires: openssl hostname iproute module-init-tools unbound
+-#Upstream kernel commit 4f647e0a3c37b8d5086214128614a136064110c3
+-#Requires: kernel >= 3.15.0-0
+ 
+ Requires(pre): shadow-utils
+ Requires(post): /bin/sed
+@@ -148,7 +147,7 @@ License: ASL 2.0
+ This provides shared library, libopenswitch.so and the openvswitch header
+ files needed to build an external application.
+ 
+-%if 0%{?rhel} > 7 || (0%{?fedora} > 28 && 0%{?fedora} < 41)
++%if (0%{?rhel} > 7 && 0%{?rhel} < 9) || (0%{?fedora} > 28 && 0%{?fedora} < 41)
+ %package -n network-scripts-%{name}
+ Summary: Open vSwitch legacy network service support
+ License: ASL 2.0
+@@ -243,10 +242,13 @@ install -m 0644 vswitchd/vswitch.ovsschema \
+         $RPM_BUILD_ROOT/%{_datadir}/openvswitch/vswitch.ovsschema
+ 
+ install -d -m 0755 $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/network-scripts/
++
++%if ! (0%{?rhel} >= 9 || 0%{?fedora} >= 41)
+ install -p -m 0755 rhel/etc_sysconfig_network-scripts_ifdown-ovs \
+         $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/network-scripts/ifdown-ovs
+ install -p -m 0755 rhel/etc_sysconfig_network-scripts_ifup-ovs \
+         $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/network-scripts/ifup-ovs
++%endif
+ 
+ install -d -m 0755 $RPM_BUILD_ROOT%{python3_sitelib}
+ cp -a $RPM_BUILD_ROOT/%{_datadir}/openvswitch/python/* \
+@@ -272,6 +274,8 @@ install -p -D -m 0755 \
+ 
+ # remove unpackaged files
+ rm -f $RPM_BUILD_ROOT%{_bindir}/ovs-parse-backtrace
++# Remove .la files, if present (automatic with %__brp_remove_la_files on f36+).
++rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
+ 
+ %check
+ %if %{with check}
+@@ -433,10 +437,8 @@ fi
+ %{_libdir}/pkgconfig/*.pc
  %{_includedir}/openvswitch/*
  %{_includedir}/openflow/*
- %exclude %{_libdir}/*.la
+-%exclude %{_libdir}/*.la
 -%exclude %{_libdir}/*.a
  
- %if 0%{?rhel} > 7 || (0%{?fedora} > 28 && 0%{?fedora} < 41)
+-%if 0%{?rhel} > 7 || (0%{?fedora} > 28 && 0%{?fedora} < 41)
++%if (0%{?rhel} > 7 && 0%{?rhel} < 9) || (0%{?fedora} > 28 && 0%{?fedora} < 41)
  %files -n network-scripts-%{name}
+ %{_sysconfdir}/sysconfig/network-scripts/ifup-ovs
+ %{_sysconfdir}/sysconfig/network-scripts/ifdown-ovs
+@@ -463,7 +465,7 @@ fi
+ %{_unitdir}/ovs-vswitchd.service
+ %{_unitdir}/ovs-delete-transient-ports.service
+ %{_datadir}/openvswitch/scripts/openvswitch.init
+-%if ! (0%{?rhel} > 7 || (0%{?fedora} > 28 && 0%{?fedora} < 41))
++%if ! (0%{?rhel} > 7 || 0%{?fedora} > 28)
+ %{_sysconfdir}/sysconfig/network-scripts/ifup-ovs
+ %{_sysconfdir}/sysconfig/network-scripts/ifdown-ovs
+ %endif
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
-index ff628c362d..1dca41c121 100644
+index ff628c362d..39e43d3768 100644
 --- a/tests/ofproto-dpif.at
 +++ b/tests/ofproto-dpif.at
 @@ -6511,6 +6511,45 @@ AT_CHECK([tail -1 stdout | grep -E "trunc\(200\),2,trunc\(300\),3,100|trunc\(300
@@ -5174,6 +5255,52 @@ index ff628c362d..1dca41c121 100644
  
  AT_CHECK([ovs-appctl --format json --pretty dpif/offload/show], [0], [dnl
  {
+@@ -10551,6 +10590,45 @@ recirc_id(0),in_port(7),packet_type(ns=0,id=0),eth(src=50:54:00:00:00:0b,dst=50:
+ OVS_VSWITCHD_STOP
+ AT_CLEANUP
+ 
++AT_SETUP([ofproto-dpif - bond rebalance interval reconfiguration])
++OVS_VSWITCHD_START
++
++AT_CHECK([ovs-appctl time/stop])
++AT_CHECK([ovs-vsctl add-bond br0 bond0 p1 p2 bond_mode=balance-slb \
++          other-config:bond-rebalance-interval=60000 -- \
++          set interface p1 type=dummy ofport_request=1 -- \
++          set interface p2 type=dummy ofport_request=2])
++
++# TEST_NEXT_REBALANCE([num])
++# Test the next rebalance value is equal to a number.
++m4_define([TEST_NEXT_REBALANCE_EQ], [
++  AT_CHECK([ovs-appctl bond/show bond0 | grep 'next rebalance:'], [0], [stdout])
++  AT_CHECK([cat stdout], [0], [next rebalance: $1 ms
++])])
++
++
++TEST_NEXT_REBALANCE_EQ([60000])
++AT_CHECK([ovs-appctl time/warp 50000], [0], [ignore])
++TEST_NEXT_REBALANCE_EQ([10000])
++
++# Decreasing the rebalance interval to something lower than the
++# already-consumed interval should make the next rebalance value negative,
++# i.e: balance will happen ASAP.
++AT_CHECK([ovs-vsctl set Port bond0 other-config:bond-rebalance-interval=10000])
++TEST_NEXT_REBALANCE_EQ([-40000])
++AT_CHECK([ovs-appctl time/warp 1], [0], [ignore])
++TEST_NEXT_REBALANCE_EQ([10000])
++
++AT_CHECK([ovs-appctl time/warp 5000], [0], [ignore])
++TEST_NEXT_REBALANCE_EQ([5000])
++
++# Increasing the rebalance interval should offset the already consumed
++# interval.
++AT_CHECK([ovs-vsctl set Port bond0 other-config:bond-rebalance-interval=60000])
++TEST_NEXT_REBALANCE_EQ([55000])
++OVS_VSWITCHD_STOP
++AT_CLEANUP
++
+ AT_SETUP([ofproto-dpif megaflow - resubmit port action])
+ OVS_VSWITCHD_START
+ AT_CHECK([ovs-appctl vlog/set dpif:dbg dpif_netdev:dbg])
 diff --git a/tests/ovs-ofctl.at b/tests/ovs-ofctl.at
 index c82af037e6..751a934e4a 100644
 --- a/tests/ovs-ofctl.at
