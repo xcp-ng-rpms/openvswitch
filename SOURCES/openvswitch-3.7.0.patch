@@ -4945,10 +4945,18 @@ index e004b79647..b152a6bcf3 100644
          memset(&ct_label, 0, sizeof(ct_label));
  
 diff --git a/lib/ovs-router.c b/lib/ovs-router.c
-index 5ed6b78594..c11a527645 100644
+index 5ed6b78594..496690b46a 100644
 --- a/lib/ovs-router.c
 +++ b/lib/ovs-router.c
-@@ -863,7 +863,7 @@ ovs_router_rules_show_json(struct json *rule_entries, bool ipv6)
+@@ -691,7 +691,6 @@ ovs_router_show_json(struct json *json_routes, const struct classifier *cls,
+         json_object_put(json, "user", json_boolean_create(rt->user));
+         json_object_put(json, "local",
+                         json_boolean_create(table == CLS_LOCAL && !rt->user));
+-        json_object_put(json, "priority", json_integer_create(rt->priority));
+         json_object_put(json, "prefix", json_integer_create(plen));
+         json_object_put_string(nh, "dev", rt->output_netdev);
+ 
+@@ -863,7 +862,7 @@ ovs_router_rules_show_json(struct json *rule_entries, bool ipv6)
          entry = json_object_create();
  
          json_object_put(entry, "priority", json_integer_create(rule->prio));
@@ -5329,10 +5337,50 @@ index c82af037e6..751a934e4a 100644
  dnl because we need ovs-vswitchd to have the controller config before starting
  dnl the controller to 'snoop' the OpenFlow messages from beginning
 diff --git a/tests/ovs-router.at b/tests/ovs-router.at
-index 27667d5bcb..b5282fd195 100644
+index 27667d5bcb..97eb95fad7 100644
 --- a/tests/ovs-router.at
 +++ b/tests/ovs-router.at
-@@ -258,6 +258,54 @@ Cached: 0: from all lookup local
+@@ -38,7 +38,6 @@ AT_CHECK([ovs-appctl --format=json --pretty ovs/route/show], [0], [dnl
+         "dev": "br0"}],
+     "prefix": 32,
+     "prefsrc": "2.2.2.2",
+-    "priority": 128,
+     "table": 255,
+     "user": false},
+   {
+@@ -50,7 +49,6 @@ AT_CHECK([ovs-appctl --format=json --pretty ovs/route/show], [0], [dnl
+         "dev": "br0"}],
+     "prefix": 32,
+     "prefsrc": "2.2.2.2",
+-    "priority": 160,
+     "table": 254,
+     "user": true},
+   {
+@@ -61,7 +59,6 @@ AT_CHECK([ovs-appctl --format=json --pretty ovs/route/show], [0], [dnl
+         "dev": "br0"}],
+     "prefix": 24,
+     "prefsrc": "2.2.2.2",
+-    "priority": 120,
+     "table": 254,
+     "user": false},
+   {
+@@ -73,7 +70,6 @@ AT_CHECK([ovs-appctl --format=json --pretty ovs/route/show], [0], [dnl
+         "gateway": "2.2.2.10"}],
+     "prefix": 24,
+     "prefsrc": "2.2.2.2",
+-    "priority": 152,
+     "table": 254,
+     "user": true},
+   {
+@@ -86,7 +82,6 @@ AT_CHECK([ovs-appctl --format=json --pretty ovs/route/show], [0], [dnl
+         "gateway": "2.2.2.10"}],
+     "prefix": 24,
+     "prefsrc": "2.2.2.2",
+-    "priority": 152,
+     "table": 254,
+     "user": true}]]
+ ])
+@@ -258,6 +253,54 @@ Cached: 0: from all lookup local
  Cached: 32766: from all lookup main
  ])
  

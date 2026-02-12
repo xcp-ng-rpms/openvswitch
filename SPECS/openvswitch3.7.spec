@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.12%{?dist}
+Release: 0.13%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,12 @@ exit 0
 %endif
 
 %changelog
+* Thu Feb 12 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.13
+- Merging upstream branch-3.7 [RH git: 9e8a1d361c]
+    Commit list:
+    c1eef6db4f ovs-router: Don't report internal route priority in json output. ()
+
+
 * Tue Feb 10 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.12
 - Merging upstream branch-3.7 [RH git: ddf2f84483]
     Commit list:
