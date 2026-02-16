@@ -27,10 +27,19 @@ index 96a503ca55..5f9e337de4 100644
  
      strategy:
 diff --git a/NEWS b/NEWS
-index c14bb45867..e4b355460a 100644
+index c14bb45867..ee4bde629d 100644
 --- a/NEWS
 +++ b/NEWS
-@@ -23,9 +23,10 @@ v3.7.0 - xx xxx xxxx
+@@ -1,4 +1,7 @@
+-v3.7.0 - xx xxx xxxx
++v3.7.1 - xx xxx xxxx
++--------------------
++
++v3.7.0 - 16 Feb 2026
+ --------------------
+    - AF_XDP:
+      * AF_XDP support now requires Linux kernel v5.4+ or a nominally older
+@@ -23,9 +26,10 @@ v3.7.0 - xx xxx xxxx
       * New global configuration option 'other-config:hw-offload-priority'
         that allows to set the order of the hardware offload providers
         to try when multiple exist for a given datapath implementation.
@@ -44,6 +53,39 @@ index c14bb45867..e4b355460a 100644
     - OVSDB-IDL:
       * New ovsdb_idl_txn_assert_read_only() interface to mark transactions
         as read-only and trigger assertion failure when application attempts
+diff --git a/configure.ac b/configure.ac
+index 7d7866331b..24f895e77a 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -13,7 +13,7 @@
+ # limitations under the License.
+ 
+ AC_PREREQ(2.63)
+-AC_INIT(openvswitch, 3.7.0, bugs@openvswitch.org)
++AC_INIT(openvswitch, 3.7.1, bugs@openvswitch.org)
+ AC_CONFIG_SRCDIR([vswitchd/ovs-vswitchd.c])
+ AC_CONFIG_MACRO_DIR([m4])
+ AC_CONFIG_AUX_DIR([build-aux])
+diff --git a/debian/changelog b/debian/changelog
+index 30bc5519bf..1450d09585 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -1,8 +1,14 @@
++openvswitch (3.7.1-1) unstable; urgency=low
++   [ Open vSwitch team ]
++   * New upstream version
++
++ -- Open vSwitch team <dev@openvswitch.org>  Mon, 16 Feb 2026 16:25:51 +0100
++
+ openvswitch (3.7.0-1) unstable; urgency=low
+ 
+    * New upstream version
+ 
+- -- Open vSwitch team <dev@openvswitch.org>  Fri, 16 Jan 2026 13:00:00 +0100
++ -- Open vSwitch team <dev@openvswitch.org>  Mon, 16 Feb 2026 16:25:51 +0100
+ 
+ openvswitch (3.6.0-1) unstable; urgency=low
+ 
 diff --git a/ipsec/ovs-monitor-ipsec.in b/ipsec/ovs-monitor-ipsec.in
 index 34abdb9e4c..70d3e5330b 100755
 --- a/ipsec/ovs-monitor-ipsec.in
