@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.14%{?dist}
+Release: 0.15%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,12 @@ exit 0
 %endif
 
 %changelog
+* Tue Feb 17 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.15
+- Merging upstream branch-3.7 [RH git: 79b4abccba]
+    Commit list:
+    0a88fdec23 Revert "python: Replace deprecated License with License-Expression (PEP 639).".
+
+
 * Mon Feb 16 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.14
 - Merging upstream branch-3.7 [RH git: e18b331f62]
     Commit list:

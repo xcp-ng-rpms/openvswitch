@@ -5145,6 +5145,19 @@ index 86b0dc7b81..7c3a5ef117 100644
      return true;
  }
  
+diff --git a/python/setup.py.template b/python/setup.py.template
+index 0a7849b4e0..e28d5d3976 100644
+--- a/python/setup.py.template
++++ b/python/setup.py.template
+@@ -97,7 +97,7 @@ setup_args = dict(
+         'Topic :: Database :: Front-Ends',
+         'Topic :: Software Development :: Libraries :: Python Modules',
+         'Topic :: System :: Networking',
+-        'License-Expression :: Apache 2.0',
++        'License :: OSI Approved :: Apache Software License',
+         'Programming Language :: Python :: 3',
+         'Programming Language :: Python :: 3.7',
+     ],
 diff --git a/rhel/openvswitch-fedora.spec.in b/rhel/openvswitch-fedora.spec.in
 index 38fbee7278..87e7025b37 100644
 --- a/rhel/openvswitch-fedora.spec.in
