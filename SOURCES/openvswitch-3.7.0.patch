@@ -53,6 +53,24 @@ index c14bb45867..ee4bde629d 100644
     - OVSDB-IDL:
       * New ovsdb_idl_txn_assert_read_only() interface to mark transactions
         as read-only and trigger assertion failure when application attempts
+diff --git a/acinclude.m4 b/acinclude.m4
+index 586163ef39..e94cf99824 100644
+--- a/acinclude.m4
++++ b/acinclude.m4
+@@ -170,6 +170,13 @@ AC_DEFUN([OVS_CHECK_LINUX_NETLINK], [
+     ])],
+     [AC_DEFINE([HAVE_RTA_VIA], [1],
+     [Define to 1 if struct rtvia is available.])])
++
++  AC_COMPILE_IFELSE([
++    AC_LANG_PROGRAM([#include <linux/if_link.h>], [
++        int netnsid =  IFLA_IF_NETNSID;
++    ])],
++    [AC_DEFINE([HAVE_IFLA_IF_NETNSID], [1],
++    [Define to 1 if IFLA_IF_NETNSID is available.])])
+ ])
+ 
+ dnl OVS_CHECK_LINUX_TC
 diff --git a/configure.ac b/configure.ac
 index 7d7866331b..24f895e77a 100644
 --- a/configure.ac
@@ -4963,6 +4981,21 @@ index 519d6d3ddb..7d3a7b9682 100644
  
      prev = NULL;
      LIST_FOR_EACH (rx, node, &dummy->rxes) {
+diff --git a/lib/netdev-linux.c b/lib/netdev-linux.c
+index f4d2685a2c..68c0b7d154 100644
+--- a/lib/netdev-linux.c
++++ b/lib/netdev-linux.c
+@@ -94,8 +94,8 @@ COVERAGE_DEFINE(netdev_linux_invalid_l4_csum);
+ COVERAGE_DEFINE(netdev_linux_unknown_l4_csum);
+ 
+ 
+-#ifndef IFLA_IF_NETNSID
+-#define IFLA_IF_NETNSID 0x45
++#ifndef HAVE_IFLA_IF_NETNSID
++#define IFLA_IF_NETNSID 46
+ #endif
+ /* These were introduced in Linux 2.6.14, so they might be missing if we have
+  * old headers. */
 diff --git a/lib/odp-util.c b/lib/odp-util.c
 index e004b79647..b152a6bcf3 100644
 --- a/lib/odp-util.c
@@ -5145,6 +5178,57 @@ index 86b0dc7b81..7c3a5ef117 100644
      return true;
  }
  
+diff --git a/ovsdb/raft.c b/ovsdb/raft.c
+index d549a3fb58..b1355d41cc 100644
+--- a/ovsdb/raft.c
++++ b/ovsdb/raft.c
+@@ -3909,15 +3909,24 @@ raft_handle_vote_request__(struct raft *raft,
+ {
+     /* Figure 3.1: "If votedFor is null or candidateId, and candidate's vote is
+      * at least as up-to-date as receiver's log, grant vote (sections 3.4,
+-     * 3.6)." */
+-    if (uuid_equals(&raft->vote, &rq->common.sid)) {
+-        /* Already voted for this candidate in this term.  Resend vote. */
+-        return true;
+-    } else if (!uuid_is_zero(&raft->vote)) {
+-        /* Already voted for different candidate in this term.  Send a reply
+-         * saying what candidate we did vote for.  This isn't a necessary part
+-         * of the Raft protocol but it can make debugging easier. */
+-        return true;
++     * 3.6)."
++     *
++     * Note: The vote from the current term is not meaningful for the pre-vote,
++     * since the pre-vote supposed to determine if the vote for the *next* term
++     * can be successful or not.  The votedFor will be null at the beginning of
++     * the next term.  Hence the only requirement for granting a pre-vote is
++     * the candidate's log being at least as up-to-date as receiver's. */
++    if (!rq->is_prevote) {
++        if (uuid_equals(&raft->vote, &rq->common.sid)) {
++            /* Already voted for this candidate in this term.  Resend vote. */
++            return true;
++        } else if (!uuid_is_zero(&raft->vote)) {
++            /* Already voted for different candidate in this term.  Send a
++             * reply saying what candidate we did vote for.  This isn't a
++             * necessary part of the Raft protocol but it can make debugging
++             * easier. */
++            return true;
++        }
+     }
+ 
+     /* Section 3.6.1: "The RequestVote RPC implements this restriction: the RPC
+diff --git a/python/ovs/_json.c b/python/ovs/_json.c
+index bd9f5fe198..371c8fed82 100644
+--- a/python/ovs/_json.c
++++ b/python/ovs/_json.c
+@@ -78,7 +78,7 @@ Parser_is_done(json_ParserObject * self)
+ }
+ 
+ static PyObject *
+-json_to_python(struct json *json)
++json_to_python(const struct json *json)
+ {
+     switch (json->type) {
+     case JSON_NULL:
 diff --git a/python/setup.py.template b/python/setup.py.template
 index 0a7849b4e0..e28d5d3976 100644
 --- a/python/setup.py.template
@@ -5489,6 +5573,110 @@ index 27667d5bcb..97eb95fad7 100644
 +
  OVS_VSWITCHD_STOP
  AT_CLEANUP
+ 
+diff --git a/tests/ovsdb-cluster.at b/tests/ovsdb-cluster.at
+index ff18ec5564..1dd74e3dea 100644
+--- a/tests/ovsdb-cluster.at
++++ b/tests/ovsdb-cluster.at
+@@ -1023,6 +1023,99 @@ done
+ 
+ AT_CLEANUP
+ 
++AT_SETUP([OVSDB cluster - disruptive server with the old term and outdated log])
++AT_KEYWORDS([ovsdb server negative unix cluster disruptive])
++
++n=3
++cp $top_srcdir/vswitchd/vswitch.ovsschema schema
++AT_CHECK([ovsdb-tool '-vPATTERN:console:%c|%p|%m' create-cluster \
++            --election-timer=2000 s1.db schema unix:s1.raft], [0], [], [stderr])
++cid=$(ovsdb-tool db-cid s1.db)
++schema_name=$(ovsdb-tool schema-name schema)
++for i in $(seq 2 $n); do
++    AT_CHECK([ovsdb-tool join-cluster s$i.db $schema_name unix:s$i.raft unix:s1.raft])
++done
++
++on_exit 'kill $(cat *.pid)'
++for i in $(seq $n); do
++    AT_CHECK([ovsdb-server -v -vconsole:off -vsyslog:off --detach --no-chdir \
++                --log-file=s$i.log --pidfile=s$i.pid --unixctl=s$i \
++                --remote=punix:s$i.ovsdb s$i.db])
++done
++for i in $(seq $n); do
++    AT_CHECK([ovsdb_client_wait unix:s$i.ovsdb $schema_name connected])
++done
++
++# Create a few transactions.
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-wait init], [0], [ignore], [ignore])
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-wait create QoS type=x], [0], [ignore], [ignore])
++
++# Stop the s3.
++OVS_APP_EXIT_AND_WAIT_BY_TARGET([$(pwd)/s3], [s3.pid])
++
++# Commit more transactions to s1 and s2.
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-wait create QoS type=y], [0], [ignore], [ignore])
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-wait create QoS type=z], [0], [ignore], [ignore])
++
++# Stop the leader - s1.
++AT_CHECK([ovs-appctl -t $(pwd)/s1 cluster/status $schema_name | grep -q "Role: leader"])
++AT_CHECK([ovs-appctl -t $(pwd)/s1 cluster/status $schema_name | grep -q "Term: 2"])
++OVS_APP_EXIT_AND_WAIT_BY_TARGET([$(pwd)/s1], [s1.pid])
++
++# Wait for s2 to start election and increase the term.
++OVS_WAIT_UNTIL([ovs-appctl -t $(pwd)/s2 cluster/status $schema_name | grep "Role: candidate"])
++AT_CHECK([ovs-appctl -t $(pwd)/s2 cluster/status $schema_name | grep -q "Term: 3"])
++
++# Stop the s2 as well.
++OVS_APP_EXIT_AND_WAIT_BY_TARGET([$(pwd)/s2], [s2.pid])
++
++# Now we have all the servers down with terms 2, 3, 2, and the s3 behind on the
++# log by two transactions.  Let's bring them back up.
++for i in $(seq $n); do
++    AT_CHECK([ovsdb-server -v -vconsole:off -vsyslog:off --detach --no-chdir \
++                --log-file=s$i.log --pidfile=s$i.pid --unixctl=s$i \
++                --remote=punix:s$i.ovsdb s$i.db])
++done
++
++# Delay elections on s1 and s2 giving s3 time to try a few times.
++for i in $(seq 1 10); do
++    AT_CHECK([ovs-appctl -t $(pwd)/s1 cluster/failure-test delay-election], [0], [ignore])
++    AT_CHECK([ovs-appctl -t $(pwd)/s2 cluster/failure-test delay-election], [0], [ignore])
++    # Election timer is 2 seconds, so delaying every second is enough to keep
++    # s1 and s2 from starting elections.
++    sleep 1
++done
++
++for i in $(seq $n); do
++    AT_CHECK([ovsdb_client_wait unix:s$i.ovsdb $schema_name connected])
++done
++
++# s3 was behind on the log, it must not be a leader.
++AT_CHECK([ovs-appctl -t $(pwd)/s3 cluster/status $schema_name | grep -q "Role: follower"])
++
++# Add some more data.
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-leader-only --no-wait create QoS type=l], [0], [ignore], [ignore])
++AT_CHECK([ovs-vsctl --db=unix:s1.ovsdb --no-leader-only --no-wait create QoS type=m], [0], [ignore], [ignore])
++
++# Check that all the servers are in the cluster and have all the data.
++for i in $(seq $n); do
++    AT_CHECK([ovs-appctl -t $(pwd)/s$i cluster/status $schema_name \
++                | grep -qE "Role: (leader|follower)"])
++    AT_CHECK([ovs-vsctl --db=unix:s$i.ovsdb --no-leader-only --bare \
++                --columns=type list QoS | grep . | sort | tr -d '\n'],
++             [0], [lmxyz])
++done
++
++# Check that s3 never won a pre-vote.
++AT_CHECK([grep 'send notification, method="vote_request"' s3.log], [0], [stdout])
++AT_CHECK([test $(grep -c vote_request stdout) -eq $(grep -c '"is_prevote":true' stdout)])
++
++for i in $(seq $n); do
++    OVS_APP_EXIT_AND_WAIT_BY_TARGET([$(pwd)/s$i], [s$i.pid])
++done
++
++AT_CLEANUP
++
+ 
+ AT_BANNER([OVSDB - cluster tests])
  
 diff --git a/tests/system-ipsec.at b/tests/system-ipsec.at
 index b0c77a8e41..6ba13abb12 100644

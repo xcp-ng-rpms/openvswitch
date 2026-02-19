@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.15%{?dist}
+Release: 0.16%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,15 @@ exit 0
 %endif
 
 %changelog
+* Thu Feb 19 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.16
+- Merging upstream branch-3.7 [RH git: c30a493c54]
+    Commit list:
+    a7cd823a12 python: Fix discarded const qualifier in json_to_python.
+    00b013a643 ovsdb: raft: Don't grant a pre-vote to a server that is behind. ()
+    95473a95e4 ovsdb-cluster.at: Test disruptive server with outdated log and term.
+    f559623f99 netdev-linux: Fix IFLA_IF_NETNSID value.
+
+
 * Tue Feb 17 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.15
 - Merging upstream branch-3.7 [RH git: 79b4abccba]
     Commit list:
