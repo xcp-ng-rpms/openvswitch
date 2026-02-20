@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.1~XCPNG2710.3%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: 0001-docs-Run-tbl-preprocessor-in-manpage-check-rule.patch
 Patch1: 0001-ovs.tmac-Fix-troff-warning-in-versions-above-groff-1.patch
