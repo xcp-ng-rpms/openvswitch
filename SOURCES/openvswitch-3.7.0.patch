@@ -14,7 +14,7 @@ index d49fbf02e0..cfbb0ff4dd 100644
      memory: 4G
  
 diff --git a/.github/workflows/build-and-test.yml b/.github/workflows/build-and-test.yml
-index 96a503ca55..5f9e337de4 100644
+index 96a503ca55..fa4e073125 100644
 --- a/.github/workflows/build-and-test.yml
 +++ b/.github/workflows/build-and-test.yml
 @@ -670,7 +670,7 @@ jobs:
@@ -26,6 +26,15 @@ index 96a503ca55..5f9e337de4 100644
      timeout-minutes: 30
  
      strategy:
+@@ -684,7 +684,7 @@ jobs:
+         dnf install -y rpm-build dnf-plugins-core
+         sed -e 's/@VERSION@/0.0.1/' rhel/openvswitch-fedora.spec.in \
+             > /tmp/ovs.spec
+-        dnf builddep -y /tmp/ovs.spec
++        dnf builddep --exclude='*.i686' -y /tmp/ovs.spec
+         rm -f /tmp/ovs.spec
+ 
+     - name: configure
 diff --git a/NEWS b/NEWS
 index c14bb45867..ee4bde629d 100644
 --- a/NEWS
@@ -282,6 +291,36 @@ index 9634bed7ba..c6e988906f 100644
  lib_libopenvswitch_la_LIBADD += lib/libopenvswitchavx512.la
  lib_libopenvswitchavx512_la_CFLAGS = \
  	-mavx512f \
+diff --git a/lib/coverage.c b/lib/coverage.c
+index a95b6aa255..24792fb779 100644
+--- a/lib/coverage.c
++++ b/lib/coverage.c
+@@ -223,6 +223,7 @@ coverage_read(struct svec *lines)
+ {
+     struct coverage_counter **c = coverage_counters;
+     unsigned long long int *totals;
++    unsigned int last_idx;
+     size_t n_never_hit;
+     uint32_t hash;
+     size_t i;
+@@ -238,6 +239,7 @@ coverage_read(struct svec *lines)
+ 
+     totals = xmalloc(n_coverage_counters * sizeof *totals);
+     ovs_mutex_lock(&coverage_mutex);
++    last_idx = (idx_count - 1) % MIN_AVG_LEN;
+     for (i = 0; i < n_coverage_counters; i++) {
+         totals[i] = c[i]->total;
+     }
+@@ -252,8 +254,7 @@ coverage_read(struct svec *lines)
+                 xasprintf("%-24s %5.1f/sec %9.3f/sec "
+                           "%13.4f/sec   total: %llu",
+                           c[i]->name,
+-                          (c[i]->min[(idx_count - 1) % MIN_AVG_LEN]
+-                           * 1000.0 / COVERAGE_RUN_INTERVAL),
++                          c[i]->min[last_idx] * 1000.0 / COVERAGE_RUN_INTERVAL,
+                           coverage_array_sum(c[i]->min, MIN_AVG_LEN) / 60.0,
+                           coverage_array_sum(c[i]->hr,  HR_AVG_LEN) / 3600.0,
+                           totals[i]));
 diff --git a/lib/daemon-unix.c b/lib/daemon-unix.c
 index 86adc9c191..52f977ec85 100644
 --- a/lib/daemon-unix.c
@@ -4968,6 +5007,35 @@ index 266c200c36..e5c9d4071c 100644
 +                                   struct flow *);
  
  #endif /* dummy.h */
+diff --git a/lib/netdev-dpdk.c b/lib/netdev-dpdk.c
+index 923191da84..b5d72283c9 100644
+--- a/lib/netdev-dpdk.c
++++ b/lib/netdev-dpdk.c
+@@ -1822,6 +1822,7 @@ static void
+ netdev_dpdk_vhost_destruct(struct netdev *netdev)
+ {
+     struct netdev_dpdk *dev = netdev_dpdk_cast(netdev);
++    bool is_client_mode;
+     char *vhost_id;
+ 
+     ovs_mutex_lock(&dpdk_mutex);
+@@ -1836,6 +1837,7 @@ netdev_dpdk_vhost_destruct(struct netdev *netdev)
+     }
+ 
+     vhost_id = dev->vhost_id;
++    is_client_mode = dev->vhost_driver_flags & RTE_VHOST_USER_CLIENT;
+     dev->vhost_id = NULL;
+     rte_free(dev->vhost_rxq_enabled);
+ 
+@@ -1850,7 +1852,7 @@ netdev_dpdk_vhost_destruct(struct netdev *netdev)
+     if (dpdk_vhost_driver_unregister(dev, vhost_id)) {
+         VLOG_ERR("%s: Unable to unregister vhost driver for socket '%s'.\n",
+                  netdev->name, vhost_id);
+-    } else if (!(dev->vhost_driver_flags & RTE_VHOST_USER_CLIENT)) {
++    } else if (!is_client_mode) {
+         /* OVS server mode - remove this socket from list for deletion */
+         fatal_signal_remove_file_to_unlink(vhost_id);
+     }
 diff --git a/lib/netdev-dummy.c b/lib/netdev-dummy.c
 index 519d6d3ddb..7d3a7b9682 100644
 --- a/lib/netdev-dummy.c
@@ -5020,10 +5088,21 @@ index e004b79647..b152a6bcf3 100644
          memset(&ct_label, 0, sizeof(ct_label));
  
 diff --git a/lib/ovs-router.c b/lib/ovs-router.c
-index 5ed6b78594..496690b46a 100644
+index 5ed6b78594..2566386ea2 100644
 --- a/lib/ovs-router.c
 +++ b/lib/ovs-router.c
-@@ -691,7 +691,6 @@ ovs_router_show_json(struct json *json_routes, const struct classifier *cls,
+@@ -91,6 +91,10 @@ struct ovs_router_entry {
+ };
+ 
+ static void rt_entry_delete__(const struct cls_rule *, struct classifier *);
++static void ovs_router_rule_add__(uint32_t prio, bool invert, bool user,
++                                  uint8_t src_len,
++                                  const struct in6_addr *from,
++                                  uint32_t lookup_table, bool ipv4);
+ 
+ static struct classifier *
+ cls_find(uint32_t table)
+@@ -691,7 +695,6 @@ ovs_router_show_json(struct json *json_routes, const struct classifier *cls,
          json_object_put(json, "user", json_boolean_create(rt->user));
          json_object_put(json, "local",
                          json_boolean_create(table == CLS_LOCAL && !rt->user));
@@ -5031,7 +5110,7 @@ index 5ed6b78594..496690b46a 100644
          json_object_put(json, "prefix", json_integer_create(plen));
          json_object_put_string(nh, "dev", rt->output_netdev);
  
-@@ -863,7 +862,7 @@ ovs_router_rules_show_json(struct json *rule_entries, bool ipv6)
+@@ -863,7 +866,7 @@ ovs_router_rules_show_json(struct json *rule_entries, bool ipv6)
          entry = json_object_create();
  
          json_object_put(entry, "priority", json_integer_create(rule->prio));
@@ -5040,6 +5119,107 @@ index 5ed6b78594..496690b46a 100644
          json_object_put(entry, "invert", json_boolean_create(rule->invert));
          json_object_put(entry, "ipv4", json_boolean_create(rule->ipv4));
          json_object_put(entry, "src-prefix",
+@@ -1036,7 +1039,7 @@ ovs_router_rule_add_cmd(struct unixctl_conn *conn, int argc OVS_UNUSED,
+             prev_prio = rule->prio;
+         }
+     }
+-    ovs_router_rule_add(prio, invert, true, src_len, &from, table, ipv4);
++    ovs_router_rule_add__(prio, invert, true, src_len, &from, table, ipv4);
+     ovs_mutex_unlock(&mutex);
+ 
+     unixctl_command_reply(conn, "OK");
+@@ -1220,19 +1223,20 @@ ovs_router_flush(bool flush_all)
+ 
+ static void
+ init_standard_rules(void)
++    OVS_REQUIRES(mutex)
+ {
+     /* Add default rules using same priorities as Linux kernel does. */
+-    ovs_router_rule_add(0, false, false, 0,
+-                        &in6addr_v4mapped_any, CLS_LOCAL, true);
+-    ovs_router_rule_add(0x7FFE, false, false, 0,
+-                        &in6addr_v4mapped_any, CLS_MAIN, true);
+-    ovs_router_rule_add(0x7FFF, false, false, 0,
+-                        &in6addr_v4mapped_any, CLS_DEFAULT, true);
+-
+-    ovs_router_rule_add(0, false, false, 0,
+-                        &in6addr_any, CLS_LOCAL, false);
+-    ovs_router_rule_add(0x7FFE, false, false, 0,
+-                        &in6addr_any, CLS_MAIN, false);
++    ovs_router_rule_add__(0, false, false, 0,
++                          &in6addr_v4mapped_any, CLS_LOCAL, true);
++    ovs_router_rule_add__(0x7FFE, false, false, 0,
++                          &in6addr_v4mapped_any, CLS_MAIN, true);
++    ovs_router_rule_add__(0x7FFF, false, false, 0,
++                          &in6addr_v4mapped_any, CLS_DEFAULT, true);
++
++    ovs_router_rule_add__(0, false, false, 0,
++                          &in6addr_any, CLS_LOCAL, false);
++    ovs_router_rule_add__(0x7FFE, false, false, 0,
++                          &in6addr_any, CLS_MAIN, false);
+ }
+ 
+ static void
+@@ -1260,6 +1264,9 @@ ovs_router_rules_flush(bool flush_all)
+ {
+     ovs_mutex_lock(&mutex);
+     ovs_router_rules_flush_protected(flush_all);
++    if (!flush_all) {
++        init_standard_rules();
++    }
+     ovs_mutex_unlock(&mutex);
+ }
+ 
+@@ -1308,10 +1315,10 @@ rule_pvec_prio(uint32_t prio)
+     }
+ }
+ 
+-void
+-ovs_router_rule_add(uint32_t prio, bool invert, bool user, uint8_t src_len,
+-                    const struct in6_addr *from, uint32_t lookup_table,
+-                    bool ipv4)
++static void
++ovs_router_rule_add__(uint32_t prio, bool invert, bool user, uint8_t src_len,
++                      const struct in6_addr *from, uint32_t lookup_table,
++                      bool ipv4)
+     OVS_REQUIRES(mutex)
+ {
+     struct router_rule *rule = xzalloc(sizeof *rule);
+@@ -1328,6 +1335,20 @@ ovs_router_rule_add(uint32_t prio, bool invert, bool user, uint8_t src_len,
+     pvector_publish(&rules);
+ }
+ 
++void
++ovs_router_rule_add(uint32_t prio, bool invert, bool user, uint8_t src_len,
++                    const struct in6_addr *from, uint32_t lookup_table,
++                    bool ipv4)
++    OVS_EXCLUDED(mutex)
++{
++    if (use_system_routing_table) {
++        ovs_mutex_lock(&mutex);
++        ovs_router_rule_add__(prio, invert, user, src_len, from,
++                              lookup_table, ipv4);
++        ovs_mutex_unlock(&mutex);
++    }
++}
++
+ int
+ ovs_router_rule_del(uint32_t prio, bool invert, uint8_t src_len,
+                     const struct in6_addr *from, uint32_t lookup_table,
+diff --git a/lib/packets.c b/lib/packets.c
+index 67e2de4be8..bf5b83d43e 100644
+--- a/lib/packets.c
++++ b/lib/packets.c
+@@ -1609,7 +1609,8 @@ packet_set_nd(struct dp_packet *packet, const struct in6_addr *target,
+                              true);
+     }
+ 
+-    while (bytes_remain >= ND_LLA_OPT_LEN && opt->len != 0) {
++    while (bytes_remain >= ND_LLA_OPT_LEN && opt->len != 0
++           && bytes_remain >= (opt->len * ND_LLA_OPT_LEN)) {
+         if (opt->type == ND_OPT_SOURCE_LINKADDR && opt->len == 1) {
+             if (!eth_addr_equals(opt->mac, sll)) {
+                 ovs_be16 *csum = &(ns->icmph.icmp6_cksum);
 diff --git a/lib/rconn.c b/lib/rconn.c
 index 4afa215154..3815cfed5b 100644
 --- a/lib/rconn.c
@@ -5810,6 +5990,66 @@ index ba1f9fe5e8..13a8054a40 100644
  AT_SETUP([offloads - set ingress_policing_rate and ingress_policing_burst - offloads disabled])
  AT_KEYWORDS([ingress_policing])
  OVS_CHECK_TC_QDISC()
+diff --git a/tests/system-route.at b/tests/system-route.at
+index 0b4b4b7e97..a074c51f9f 100644
+--- a/tests/system-route.at
++++ b/tests/system-route.at
+@@ -343,18 +343,15 @@ on_exit 'ip link del p1-route'
+ AT_CHECK([ip tuntap add name p1-route mode tap])
+ AT_CHECK([ip link set p1-route up])
+ 
+-dnl Check there are no non-standard rules cached in OVS.
+-AT_CHECK([ovs-appctl ovs/route/rule/show], [0], [dnl
+-Cached: 0: from all lookup local
+-Cached: 32766: from all lookup main
+-Cached: 32767: from all lookup default
+-])
+-AT_CHECK([ovs-appctl ovs/route/rule/show -6], [0], [dnl
+-Cached: 0: from all lookup local
+-Cached: 32766: from all lookup main
+-])
+-
+-dnl Add unsupported rules to kernel.
++dnl Capture initial cache state before adding any rules.
++AT_CHECK([ovs-appctl ovs/route/rule/show | sort], [0], [stdout])
++AT_CHECK([mv stdout initial_v4])
++AT_CHECK([ovs-appctl ovs/route/rule/show -6 | sort], [0], [stdout])
++AT_CHECK([mv stdout initial_v6])
++
++dnl Add various unsupported rules.  These rules use selectors that OVS doesn't
++dnl support (fwmark, dport, sport, tun_id, iif, ipproto), so they should not
++dnl be cached by OVS even though the kernel accepts them.
+ on_exit 'ip rule del priority 100 fwmark 0x16 lookup 42'
+ AT_CHECK([ip rule add priority 100 fwmark 0x16 lookup 42])
+ on_exit 'ip rule del priority 101 from 10.0.0.1 dport 22 lookup 42'
+@@ -372,16 +369,17 @@ AT_CHECK([ip rule add priority 106 from all tun_id 22 lookup 42])
+ 
+ dnl Give the main thread a chance to act.
+ AT_CHECK([ovs-appctl revalidator/wait])
+-dnl Check OVS rules cache hasn't changed.
+-AT_CHECK([ovs-appctl ovs/route/rule/show], [0], [dnl
+-Cached: 0: from all lookup local
+-Cached: 32766: from all lookup main
+-Cached: 32767: from all lookup default
+-])
+-AT_CHECK([ovs-appctl ovs/route/rule/show -6], [0], [dnl
+-Cached: 0: from all lookup local
+-Cached: 32766: from all lookup main
+-])
++
++dnl Capture final cache state and verify it has not changed.
++AT_CHECK([ovs-appctl ovs/route/rule/show | sort], [0], [stdout])
++AT_CHECK([mv stdout final_v4])
++AT_CHECK([ovs-appctl ovs/route/rule/show -6 | sort], [0], [stdout])
++AT_CHECK([mv stdout final_v6])
++
++dnl Compare initial and final states, they should be identical since
++dnl unsupported rules should not be cached.
++AT_CHECK([diff -u initial_v4 final_v4])
++AT_CHECK([diff -u initial_v6 final_v6])
+ 
+ OVS_TRAFFIC_VSWITCHD_STOP
+ AT_CLEANUP
 diff --git a/vswitchd/vswitch.xml b/vswitchd/vswitch.xml
 index 29ad9c13e5..b7a5afc0a5 100644
 --- a/vswitchd/vswitch.xml

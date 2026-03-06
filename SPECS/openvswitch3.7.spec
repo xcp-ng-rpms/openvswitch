@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.17%{?dist}
+Release: 0.18%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,18 @@ exit 0
 %endif
 
 %changelog
+* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.18
+- Merging upstream branch-3.7 [RH git: 1e199a141b]
+    Commit list:
+    f86caea060 netdev-dpdk: Fix vhost_driver_flags data race in destruct.
+    71dae047db coverage: Fix data race when reading idx_count in coverage_read().
+    b5f36a6d61 packets: Validate ND option length in packet_set_nd().
+    920eb244e9 ovs-router: Fix locking in ovs_router_rule_add().
+    dd4d9983a1 ovs-router: Fix --disable-system-route rules filter.
+    cd7b495e2d tests: Make routing rules checks more resilient.
+    a51e475062 github: Fix potential 32-bit package installations.
+
+
 * Thu Feb 26 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.17
 - Merging redhat subtree [RH git: f9a2da7090]
     Commit list:
