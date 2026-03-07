@@ -343,6 +343,18 @@ index 86adc9c191..52f977ec85 100644
          grpstr += strspn(grpstr, " \t\r\n");
  
          if (*grpstr) {
+diff --git a/lib/dpctl.c b/lib/dpctl.c
+index 074e739222..752168b5a6 100644
+--- a/lib/dpctl.c
++++ b/lib/dpctl.c
+@@ -2641,6 +2641,7 @@ dpctl_ct_ipf_get_status(int argc, const char *argv[],
+         } else {
+             dpctl_error(dpctl_p, error,
+                         "ipf status could not be retrieved");
++            dpif_close(dpif);
+             return error;
+         }
+ 
 diff --git a/lib/dpdk.c b/lib/dpdk.c
 index 4dd5e97895..d27b95cd9a 100644
 --- a/lib/dpdk.c

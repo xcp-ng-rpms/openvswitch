@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.18%{?dist}
+Release: 0.19%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,12 @@ exit 0
 %endif
 
 %changelog
+* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.19
+- Merging upstream branch-3.7 [RH git: f6b7f613f9]
+    Commit list:
+    c052c469b0 dpctl: Fix memory leak in ipf-get-status command.
+
+
 * Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.18
 - Merging upstream branch-3.7 [RH git: 1e199a141b]
     Commit list:
