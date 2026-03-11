@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.19%{?dist}
+Release: 0.20%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -663,7 +663,7 @@ chown -R openvswitch:openvswitch /etc/openvswitch
 %else
     # Package install, not upgrade
     if [ $1 -eq 1 ]; then
-        /bin/systemctl daemon-reload >dev/null || :
+        /bin/systemctl daemon-reload >/dev/null || :
     fi
 %endif
 
@@ -816,6 +816,14 @@ exit 0
 %endif
 
 %changelog
+* Wed Mar 11 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.20
+- Merging redhat subtree [RH git: 580891d4cc]
+    Commit list:
+    41662c2205 redhat: fix misc bugs found during security review
+    ffc5dd582d redhat: update README.rst and README.dpdk
+    0e5fa41626 pkgtool: fix changelog history and release numbering for point releases
+
+
 * Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.19
 - Merging upstream branch-3.7 [RH git: f6b7f613f9]
     Commit list:
