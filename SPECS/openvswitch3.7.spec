@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.20%{?dist}
+Release: 0.21%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,12 @@ exit 0
 %endif
 
 %changelog
+* Fri Mar 13 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.21
+- Merging upstream branch-3.7 [RH git: e8ff5fb3a9]
+    Commit list:
+    0d4c78e153 github: Update all the actions to prepare for Node.js 24.
+
+
 * Wed Mar 11 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.20
 - Merging redhat subtree [RH git: 580891d4cc]
     Commit list:
