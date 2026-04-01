@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.0
-Release: 0.21%{?dist}
+Release: 0.22%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -816,6 +816,14 @@ exit 0
 %endif
 
 %changelog
+* Tue Mar 31 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.22
+- Merging upstream branch-3.7 [RH git: 0fe7181cf4]
+    Commit list:
+    e1b82e9b7c github: Temporarily disable system tests for DPDK and AF_XDP.
+    a9785c7e1d conntrack: Fix replace_substring to handle larger packets.
+    7dc6fb7baa faq: Update DPDK version for older releases to 23.11.6 and 24.11.4.
+
+
 * Fri Mar 13 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.21
 - Merging upstream branch-3.7 [RH git: e8ff5fb3a9]
     Commit list:

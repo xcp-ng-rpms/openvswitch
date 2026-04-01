@@ -14,7 +14,7 @@ index d49fbf02e0..cfbb0ff4dd 100644
      memory: 4G
  
 diff --git a/.github/workflows/build-and-test.yml b/.github/workflows/build-and-test.yml
-index 96a503ca55..f3d4901562 100644
+index 96a503ca55..f1d006de64 100644
 --- a/.github/workflows/build-and-test.yml
 +++ b/.github/workflows/build-and-test.yml
 @@ -23,7 +23,7 @@ jobs:
@@ -61,8 +61,27 @@ index 96a503ca55..f3d4901562 100644
        with:
          path: libreswan-deb
          key:  ${{ steps.gen_libreswan_key.outputs.key }}
-@@ -267,7 +267,7 @@ jobs:
+@@ -181,10 +181,10 @@ jobs:
+             opts:         --enable-shared
  
+           - compiler:     gcc
+-            testsuite:    check check-dpdk
++            testsuite:    check
+             dpdk:         dpdk
+           - compiler:     clang
+-            testsuite:    check check-dpdk
++            testsuite:    check
+             dpdk:         dpdk
+ 
+           - compiler:     gcc
+@@ -261,13 +261,9 @@ jobs:
+             dpdk:         dpdk
+             testsuite:    check-system-tso
+ 
+-          - compiler:     gcc
+-            dpdk:         dpdk
+-            testsuite:    check-afxdp
+-
      steps:
      - name: checkout
 -      uses: actions/checkout@v4
@@ -70,7 +89,7 @@ index 96a503ca55..f3d4901562 100644
  
      - name: update PATH
        run:  |
-@@ -275,7 +275,7 @@ jobs:
+@@ -275,7 +271,7 @@ jobs:
          echo "$HOME/.local/bin" >> $GITHUB_PATH
  
      - name: set up python
@@ -79,7 +98,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          python-version: ${{ env.python_default }}
  
-@@ -295,13 +295,13 @@ jobs:
+@@ -295,13 +291,13 @@ jobs:
  
      - name: DPDK cache
        if:   matrix.dpdk != '' || matrix.dpdk_shared != ''
@@ -95,7 +114,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          path: libreswan-deb
          key:  ${{ needs.build-libreswan.outputs.libreswan_key }}
-@@ -321,7 +321,7 @@ jobs:
+@@ -321,7 +317,7 @@ jobs:
        run:  sudo apt install -y gcc-multilib
  
      - name: checkout sparse
@@ -104,7 +123,7 @@ index 96a503ca55..f3d4901562 100644
        # Official mirror of the git.kernel.org/pub/scm/devel/sparse/sparse.git.
        with:
          repository: lucvoo/sparse
-@@ -348,7 +348,7 @@ jobs:
+@@ -348,7 +344,7 @@ jobs:
  
      - name: upload logs on failure
        if: failure() || cancelled()
@@ -113,7 +132,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          name: logs-linux-${{ join(matrix.*, '-') }}
          path: logs.tgz
-@@ -371,7 +371,7 @@ jobs:
+@@ -371,7 +367,7 @@ jobs:
  
      steps:
      - name: checkout
@@ -122,7 +141,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          fetch-depth: 0
  
-@@ -430,20 +430,20 @@ jobs:
+@@ -430,20 +426,20 @@ jobs:
  
      - name: check for analyzer result cache
        id: clang_cache
@@ -146,7 +165,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          path: dpdk-dir
          key:  ${{ needs.build-dpdk.outputs.dpdk_key }}
-@@ -484,7 +484,7 @@ jobs:
+@@ -484,7 +480,7 @@ jobs:
  
      steps:
      - name: checkout
@@ -155,7 +174,7 @@ index 96a503ca55..f3d4901562 100644
  
      - name: update PATH
        run: |
-@@ -492,18 +492,18 @@ jobs:
+@@ -492,18 +488,18 @@ jobs:
          echo "$HOME/.local/bin" >> $GITHUB_PATH
  
      - name: check for analyzer result cache
@@ -177,7 +196,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          path: dpdk-dir
          key:  ${{ needs.build-dpdk.outputs.dpdk_key }}
-@@ -527,10 +527,10 @@ jobs:
+@@ -527,10 +523,10 @@ jobs:
  
      steps:
      - name: Checkout OVS
@@ -190,7 +209,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          repository: google/oss-fuzz
          path: oss-fuzz
-@@ -560,13 +560,13 @@ jobs:
+@@ -560,13 +556,13 @@ jobs:
  
      steps:
      - name: checkout
@@ -206,7 +225,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          python-version: ${{ env.python_default }}
      - name: install dependencies
-@@ -577,7 +577,7 @@ jobs:
+@@ -577,7 +573,7 @@ jobs:
        run:  ./.ci/osx-build.sh
      - name: upload logs on failure
        if: failure()
@@ -215,7 +234,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          name: logs-osx-clang---disable-ssl
          path: config.log
-@@ -640,7 +640,7 @@ jobs:
+@@ -640,7 +636,7 @@ jobs:
  
      steps:
      - name: checkout
@@ -224,7 +243,7 @@ index 96a503ca55..f3d4901562 100644
  
      - name: update PATH
        run:  |
-@@ -662,7 +662,7 @@ jobs:
+@@ -662,7 +658,7 @@ jobs:
        run:  ./.ci/linux-build.sh
  
      - name: upload deb packages
@@ -233,7 +252,7 @@ index 96a503ca55..f3d4901562 100644
        with:
          name: deb-packages-${{ matrix.dpdk }}-dpdk
          path: '/home/runner/work/ovs/*.deb'
-@@ -670,7 +670,7 @@ jobs:
+@@ -670,7 +666,7 @@ jobs:
    build-linux-rpm:
      name: linux rpm fedora
      runs-on: ubuntu-latest
@@ -242,7 +261,7 @@ index 96a503ca55..f3d4901562 100644
      timeout-minutes: 30
  
      strategy:
-@@ -678,13 +678,13 @@ jobs:
+@@ -678,13 +674,13 @@ jobs:
  
      steps:
      - name: checkout
@@ -258,7 +277,7 @@ index 96a503ca55..f3d4901562 100644
          rm -f /tmp/ovs.spec
  
      - name: configure
-@@ -697,7 +697,7 @@ jobs:
+@@ -697,7 +693,7 @@ jobs:
        run:  dnf install -y rpm/rpmbuild/RPMS/*/*.rpm
  
      - name: upload rpm packages
@@ -267,6 +286,37 @@ index 96a503ca55..f3d4901562 100644
        with:
          name: rpm-packages
          path: |
+diff --git a/AUTHORS.rst b/AUTHORS.rst
+index fae5964bcb..9de7c4b616 100644
+--- a/AUTHORS.rst
++++ b/AUTHORS.rst
+@@ -760,6 +760,7 @@ Scott Hendricks
+ Sean Brady                      sbrady@gtfservices.com
+ Sebastian Andrzej Siewior       sebastian@breakpoint.cc
+ Sébastien RICCIO                sr@swisscenter.com
++Seiji Sakurai                   Seiji.Sakurai@outlook.com
+ Shweta Seth                     shwseth@cisco.com
+ Simon Jouet                     simon.jouet@gmail.com
+ Spiro Kourtessis                spiro@vmware.com
+diff --git a/Documentation/faq/releases.rst b/Documentation/faq/releases.rst
+index aa06e09e1e..1db42ad5c1 100644
+--- a/Documentation/faq/releases.rst
++++ b/Documentation/faq/releases.rst
+@@ -165,10 +165,10 @@ Q: What DPDK version does each Open vSwitch release work with?
+     3.0.x        21.11.9
+     3.1.x        22.11.7
+     3.2.x        22.11.7
+-    3.3.x        23.11.5
+-    3.4.x        23.11.5
+-    3.5.x        24.11.3
+-    3.6.x        24.11.3
++    3.3.x        23.11.6
++    3.4.x        23.11.6
++    3.5.x        24.11.4
++    3.6.x        24.11.4
+     3.7.x        25.11
+     ============ ========
+ 
 diff --git a/NEWS b/NEWS
 index c14bb45867..ee4bde629d 100644
 --- a/NEWS
@@ -523,6 +573,33 @@ index 9634bed7ba..c6e988906f 100644
  lib_libopenvswitch_la_LIBADD += lib/libopenvswitchavx512.la
  lib_libopenvswitchavx512_la_CFLAGS = \
  	-mavx512f \
+diff --git a/lib/conntrack.c b/lib/conntrack.c
+index 00262a0c63..f8a31e87e7 100644
+--- a/lib/conntrack.c
++++ b/lib/conntrack.c
+@@ -3237,9 +3237,9 @@ expectation_create(struct conntrack *ct, ovs_be16 dst_port,
+ }
+ 
+ static void
+-replace_substring(char *substr, uint8_t substr_size,
+-                  uint8_t total_size, char *rep_str,
+-                  uint8_t rep_str_size)
++replace_substring(char *substr, size_t substr_size,
++                  size_t total_size, char *rep_str,
++                  size_t rep_str_size)
+ {
+     memmove(substr + rep_str_size, substr + substr_size,
+             total_size - substr_size);
+@@ -3261,6 +3261,9 @@ repl_bytes(char *str, char c1, char c2, int max)
+     }
+ }
+ 
++/* Replaces a substring in the packet and rewrites the packet
++ * size to match.  This function assumes the caller has verified
++ * the lengths to prevent under/over flow. */
+ static void
+ modify_packet(struct dp_packet *pkt, char *pkt_str, size_t size,
+               char *repl_str, size_t repl_size,
 diff --git a/lib/coverage.c b/lib/coverage.c
 index a95b6aa255..24792fb779 100644
 --- a/lib/coverage.c
@@ -5755,6 +5832,18 @@ index 38fbee7278..87e7025b37 100644
  %{_sysconfdir}/sysconfig/network-scripts/ifup-ovs
  %{_sysconfdir}/sysconfig/network-scripts/ifdown-ovs
  %endif
+diff --git a/tests/library.at b/tests/library.at
+index 82ac80a271..7445da29b4 100644
+--- a/tests/library.at
++++ b/tests/library.at
+@@ -308,3 +308,7 @@ AT_CHECK([ovstest test-cooperative-multitasking-nested-yield], [0], [], [dnl
+ cooperative_multitasking|ERR|Nested yield avoided, this is a bug! Enable debug logging for more details.
+ ])
+ AT_CLEANUP
++
++AT_SETUP([Conntrack Library - FTP ALG parsing])
++AT_CHECK([ovstest test-conntrack ftp-alg-large-payload])
++AT_CLEANUP
 diff --git a/tests/ofproto-dpif.at b/tests/ofproto-dpif.at
 index ff628c362d..39e43d3768 100644
 --- a/tests/ofproto-dpif.at
@@ -6294,6 +6383,213 @@ index 0b4b4b7e97..a074c51f9f 100644
  
  OVS_TRAFFIC_VSWITCHD_STOP
  AT_CLEANUP
+diff --git a/tests/test-conntrack.c b/tests/test-conntrack.c
+index dc8d6cff94..22db95f914 100644
+--- a/tests/test-conntrack.c
++++ b/tests/test-conntrack.c
+@@ -54,6 +54,100 @@ build_packet(uint16_t udp_src, uint16_t udp_dst, ovs_be16 *dl_type)
+     return pkt;
+ }
+ 
++/* Build an Ethernet + IPv4 packet.  If 'pkt' is NULL a new buffer is
++ * allocated with 64 bytes of extra headroom so the FTP MTU guard passes.
++ * The buffer is populated up through the IP header; l4 is set to point
++ * directly after the IP header.  The caller is responsible for filling
++ * the L4 header and payload that follow. */
++static struct dp_packet *
++build_eth_ip_packet(struct dp_packet *pkt, struct eth_addr eth_src,
++                    struct eth_addr eth_dst, ovs_be32 ip_src, ovs_be32 ip_dst,
++                    uint8_t proto, uint16_t payload_alloc)
++{
++    struct ip_header *iph;
++    uint16_t proto_len;
++
++    switch (proto) {
++    case IPPROTO_TCP:  proto_len = TCP_HEADER_LEN;  break;
++    case IPPROTO_UDP:  proto_len = UDP_HEADER_LEN;  break;
++    case IPPROTO_ICMP: proto_len = ICMP_HEADER_LEN; break;
++    default:           proto_len = 0;               break;
++    }
++
++    if (pkt == NULL) {
++        /* 64-byte extra headroom keeps dp_packet_get_allocated() large enough
++         * that the FTP V4 MTU guard (orig_used_size + 8 <= allocated) passes
++         * even when the packet is near its maximum size. */
++        pkt = dp_packet_new_with_headroom(ETH_HEADER_LEN + IP_HEADER_LEN
++                                          + proto_len + payload_alloc, 64);
++    }
++
++    eth_compose(pkt, eth_src, eth_dst, ETH_TYPE_IP,
++                IP_HEADER_LEN + proto_len + payload_alloc);
++    iph = dp_packet_l3(pkt);
++    iph->ip_ihl_ver = IP_IHL_VER(5, 4);
++    iph->ip_tot_len = htons(IP_HEADER_LEN + proto_len + payload_alloc);
++    iph->ip_ttl = 64;
++    iph->ip_proto = proto;
++    packet_set_ipv4_addr(pkt, &iph->ip_src, ip_src);
++    packet_set_ipv4_addr(pkt, &iph->ip_dst, ip_dst);
++    iph->ip_csum = csum(iph, IP_HEADER_LEN);
++    dp_packet_set_l4(pkt, (char *) iph + IP_HEADER_LEN);
++    return pkt;
++}
++
++/* Fill the TCP header and optional payload for a packet previously built with
++ * build_eth_ip_packet().  The 'payload' buffer of 'payload_len' bytes is
++ * appended after the TCP header if non-NULL.  IP total-length, IP checksum,
++ * and TCP checksum are all updated to reflect the final packet contents. */
++static struct dp_packet *
++build_tcp_packet(struct dp_packet *pkt, uint16_t tcp_src, uint16_t tcp_dst,
++                 uint16_t tcp_flags, const char *tcp_payload,
++                 size_t payload_len)
++{
++    struct tcp_header *tcph;
++    struct ip_header *iph;
++    uint16_t ip_tot_len;
++    uint32_t tcp_csum;
++    struct flow flow;
++
++    ovs_assert(pkt);
++    tcph = dp_packet_l4(pkt);
++    ovs_assert(tcph);
++
++    tcph->tcp_src = htons(tcp_src);
++    tcph->tcp_dst = htons(tcp_dst);
++    put_16aligned_be32(&tcph->tcp_seq, 0);
++    put_16aligned_be32(&tcph->tcp_ack, 0);
++    tcph->tcp_ctl = TCP_CTL(tcp_flags, TCP_HEADER_LEN / 4);
++    tcph->tcp_winsz = htons(65535);
++    tcph->tcp_csum = 0;
++    tcph->tcp_urg = 0;
++
++    if (tcp_payload && payload_len > 0) {
++        /* The caller must have pre-allocated space via build_eth_ip_packet's
++         * payload_alloc argument.  Write directly to avoid a realloc that
++         * would lose the extra headroom required by the FTP MTU guard. */
++        memcpy((char *) tcph + TCP_HEADER_LEN, tcp_payload, payload_len);
++    }
++
++    /* Update IP total length and recompute IP checksum. */
++    iph = dp_packet_l3(pkt);
++    ip_tot_len = IP_HEADER_LEN + TCP_HEADER_LEN + payload_len;
++    iph->ip_tot_len = htons(ip_tot_len);
++    iph->ip_csum = 0;
++    iph->ip_csum = csum(iph, IP_HEADER_LEN);
++
++    /* Compute TCP checksum over pseudo-header + TCP segment. */
++    tcp_csum = packet_csum_pseudoheader(iph);
++    tcph->tcp_csum = csum_finish(
++        csum_continue(tcp_csum, tcph, TCP_HEADER_LEN + payload_len));
++
++    /* Set l3/l4 offsets so conntrack can extract a flow key. */
++    flow_extract(pkt, &flow);
++    return pkt;
++}
++
+ static struct dp_packet_batch *
+ prepare_packets(size_t n, bool change, unsigned tid, ovs_be16 *dl_type)
+ {
+@@ -397,6 +491,87 @@ test_pcap(struct ovs_cmdl_context *ctx)
+     conntrack_destroy(ct);
+     ovs_pcap_close(pcap);
+ }
++
++/* ALG related testing. */
++
++/* FTP IPv4 PORT payload for testing. */
++#define FTP_PORT_CMD_STR  "PORT 192,168,123,2,113,42\r\n"
++#define FTP_CMD_PAD       234
++#define FTP_PAYLOAD_LEN   (sizeof FTP_PORT_CMD_STR - 1 + FTP_CMD_PAD)
++
++/* Test modify_packet wrapping.
++ *
++ * The test builds a minimal FTP control-channel exchange:
++ *   1. A TCP SYN that creates a conntrack entry with helper=ftp and SNAT.
++ *   2. A PSH|ACK carrying "PORT 192,168,123,2,113,42\r\n" padded to exactly
++ *      261 bytes of TCP payload, which makes total_size == 256.
++ *
++ * After the PORT packet is processed the address field in the payload must
++ * read "192,168,1,1" (the SNAT address with dots replaced by commas). */
++static void
++test_ftp_alg_large_payload(struct ovs_cmdl_context *ctx OVS_UNUSED)
++{
++    /* Packet endpoints. */
++    struct eth_addr eth_src = ETH_ADDR_C(00, 01, 02, 03, 04, 05);
++    struct eth_addr eth_dst = ETH_ADDR_C(00, 06, 07, 08, 09, 0a);
++    ovs_be32 ip_src = inet_addr("192.168.123.2"); /* FTP client. */
++    ovs_be32 ip_dst = inet_addr("192.168.1.1");   /* FTP server / SNAT addr. */
++    uint16_t sport = 12345;
++    uint16_t dport = 21;                          /* FTP control port. */
++
++    /* SNAT: rewrite client address to 192.168.1.1 in PORT commands. */
++    struct nat_action_info_t nat_info;
++    memset(&nat_info, 0, sizeof nat_info);
++    nat_info.nat_action = NAT_ACTION_SRC;
++    nat_info.min_addr.ipv4 = ip_dst;
++    nat_info.max_addr.ipv4 = ip_dst;
++
++    ct = conntrack_init();
++    conntrack_set_tcp_seq_chk(ct, false);
++
++    long long now = time_msec();
++
++    struct dp_packet *syn = build_eth_ip_packet(NULL, eth_src, eth_dst,
++                                                ip_src, ip_dst,
++                                                IPPROTO_TCP, 0);
++    build_tcp_packet(syn, sport, dport, TCP_SYN, NULL, 0);
++
++    struct dp_packet_batch syn_batch;
++    dp_packet_batch_init_packet(&syn_batch, syn);
++    conntrack_execute(ct, &syn_batch, htons(ETH_TYPE_IP), false, true, 0,
++                      NULL, NULL, "ftp", &nat_info, now, 0);
++    dp_packet_delete_batch(&syn_batch, true);
++
++    /* We get to skip some of the processing because the conntrack execute
++     * above will create the required conntrack entries. */
++
++    /* Build the large payload: PORT command followed by padding spaces
++     * and a final "\r\n" to reach exactly FTP_PAYLOAD_LEN bytes.  The
++     * FTP parser only looks at the first LARGEST_FTP_MSG_OF_INTEREST (128)
++     * bytes, so the trailing spaces do not interfere with parsing. */
++    char ftp_payload[FTP_PAYLOAD_LEN];
++    memcpy(ftp_payload, FTP_PORT_CMD_STR, sizeof FTP_PORT_CMD_STR - 1);
++    memset(ftp_payload + sizeof FTP_PORT_CMD_STR - 1, ' ', FTP_CMD_PAD);
++
++    struct dp_packet *port_pkt =
++        build_eth_ip_packet(NULL, eth_src, eth_dst, ip_src, ip_dst,
++                            IPPROTO_TCP, FTP_PAYLOAD_LEN);
++    build_tcp_packet(port_pkt, sport, dport, TCP_PSH | TCP_ACK,
++                     ftp_payload, FTP_PAYLOAD_LEN);
++
++    struct dp_packet_batch port_batch;
++    dp_packet_batch_init_packet(&port_batch, port_pkt);
++    conntrack_execute(ct, &port_batch, htons(ETH_TYPE_IP), false, true, 0,
++                      NULL, NULL, "ftp", &nat_info, now, 0);
++
++    struct tcp_header *th = dp_packet_l4(port_pkt);
++    size_t tcp_hdr_len = TCP_OFFSET(th->tcp_ctl) * 4;
++    const char *ftp_start = (const char *) th + tcp_hdr_len;
++    ovs_assert(!strncmp(ftp_start, "PORT 192,168,1,1,", 17));
++    dp_packet_delete_batch(&port_batch, true);
++    conntrack_destroy(ct);
++}
++
+ 
+ static const struct ovs_cmdl_command commands[] = {
+     /* Connection tracker tests. */
+@@ -415,6 +590,13 @@ static const struct ovs_cmdl_command commands[] = {
+      * and an empty zone. */
+     {"benchmark-zones", "n_conns n_zones iterations", 3, 3,
+         test_benchmark_zones, OVS_RO},
++    /* Verifies that the FTP ALG replace_substring function correctly handles
++     * a packet whose payload puts total_size at exactly 256 bytes.  The
++     * original uint8_t parameter type truncated 256 to 0, leading to a
++     * near-SIZE_MAX memmove (heap overflow).  The test confirms the address
++     * is rewritten to the SNAT target rather than causing a crash. */
++    {"ftp-alg-large-payload", "", 0, 0,
++        test_ftp_alg_large_payload, OVS_RO},
+ 
+     {NULL, NULL, 0, 0, NULL, OVS_RO},
+ };
 diff --git a/vswitchd/vswitch.xml b/vswitchd/vswitch.xml
 index 29ad9c13e5..b7a5afc0a5 100644
 --- a/vswitchd/vswitch.xml
