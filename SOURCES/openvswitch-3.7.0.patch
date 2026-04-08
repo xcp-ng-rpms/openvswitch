@@ -318,19 +318,26 @@ index aa06e09e1e..1db42ad5c1 100644
      ============ ========
  
 diff --git a/NEWS b/NEWS
-index c14bb45867..ee4bde629d 100644
+index c14bb45867..6b2dfc2522 100644
 --- a/NEWS
 +++ b/NEWS
-@@ -1,4 +1,7 @@
+@@ -1,4 +1,14 @@
 -v3.7.0 - xx xxx xxxx
-+v3.7.1 - xx xxx xxxx
++v3.7.2 - xx xxx xxxx
 +--------------------
++
++v3.7.1 - 31 Mar 2026
++--------------------
++   - Bug fixes
++   - Security:
++     * Fixed buffer overflow during conntrack processing of alg=ftp in
++       userspace datapath (CVE-2026-34956).
 +
 +v3.7.0 - 16 Feb 2026
  --------------------
     - AF_XDP:
       * AF_XDP support now requires Linux kernel v5.4+ or a nominally older
-@@ -23,9 +26,10 @@ v3.7.0 - xx xxx xxxx
+@@ -23,9 +33,10 @@ v3.7.0 - xx xxx xxxx
       * New global configuration option 'other-config:hw-offload-priority'
         that allows to set the order of the hardware offload providers
         to try when multiple exist for a given datapath implementation.
@@ -363,7 +370,7 @@ index 586163ef39..e94cf99824 100644
  
  dnl OVS_CHECK_LINUX_TC
 diff --git a/configure.ac b/configure.ac
-index 7d7866331b..24f895e77a 100644
+index 7d7866331b..ac5d1e33ac 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -13,7 +13,7 @@
@@ -371,20 +378,26 @@ index 7d7866331b..24f895e77a 100644
  
  AC_PREREQ(2.63)
 -AC_INIT(openvswitch, 3.7.0, bugs@openvswitch.org)
-+AC_INIT(openvswitch, 3.7.1, bugs@openvswitch.org)
++AC_INIT(openvswitch, 3.7.2, bugs@openvswitch.org)
  AC_CONFIG_SRCDIR([vswitchd/ovs-vswitchd.c])
  AC_CONFIG_MACRO_DIR([m4])
  AC_CONFIG_AUX_DIR([build-aux])
 diff --git a/debian/changelog b/debian/changelog
-index 30bc5519bf..1450d09585 100644
+index 30bc5519bf..dc76ab40f7 100644
 --- a/debian/changelog
 +++ b/debian/changelog
-@@ -1,8 +1,14 @@
+@@ -1,8 +1,20 @@
++openvswitch (3.7.2-1) unstable; urgency=low
++   [ Open vSwitch team ]
++   * New upstream version
++
++ -- Open vSwitch team <dev@openvswitch.org>  Tue, 31 Mar 2026 17:11:27 +0200
++
 +openvswitch (3.7.1-1) unstable; urgency=low
 +   [ Open vSwitch team ]
 +   * New upstream version
 +
-+ -- Open vSwitch team <dev@openvswitch.org>  Mon, 16 Feb 2026 16:25:51 +0100
++ -- Open vSwitch team <dev@openvswitch.org>  Tue, 31 Mar 2026 17:11:27 +0200
 +
  openvswitch (3.7.0-1) unstable; urgency=low
  
@@ -5554,10 +5567,18 @@ index 4afa215154..3815cfed5b 100644
  }
  
 diff --git a/lib/stream-ssl.c b/lib/stream-ssl.c
-index 4470bca543..c8eb26b2a9 100644
+index 4470bca543..9b468e0fad 100644
 --- a/lib/stream-ssl.c
 +++ b/lib/stream-ssl.c
-@@ -1289,7 +1289,7 @@ stream_ssl_set_protocols(const char *arg)
+@@ -1080,6 +1080,7 @@ do_ssl_init(void)
+     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                        NULL);
+     SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
++    SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET);
+     SSL_CTX_set_cipher_list(ctx, "DEFAULT:@SECLEVEL=2");
+ 
+     return 0;
+@@ -1289,7 +1290,7 @@ stream_ssl_set_protocols(const char *arg)
          {"TLSv1.2", TLS1_2_VERSION,      false},
          {"TLSv1.3", TLS1_3_VERSION,      false},
      };
