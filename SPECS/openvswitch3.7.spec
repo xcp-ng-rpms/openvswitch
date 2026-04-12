@@ -13,7 +13,7 @@
 
 %define pkgname openvswitch3.7
 
-%global commit bcec20c86d2ccfc6a577b32066a3d9416fd61b76
+
 %if 0%{?commit:1}
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 %endif
@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.1
-Release: 0.0%{?dist}
+Release: 2%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -77,7 +77,8 @@ License: ASL 2.0 and LGPLv2+ and SISSL
 %define dpdkarches
 %endif
 
-%define ovsver 3.7.0
+%define ovsver 3.7.1
+%define patchver 3.7
 %if 0%{?commit:1}
 Source: https://github.com/openvswitch/ovs/archive/%{commit}.tar.gz#/openvswitch-%{commit}.tar.gz
 %else
@@ -96,7 +97,7 @@ Source101: https://pypi.io/packages/source/P/Pygments/Pygments-%{pygmentsver}.ta
 Source102: https://pypi.io/packages/source/S/Sphinx/Sphinx-%{sphinxver}.tar.gz
 Source103: https://pypi.io/packages/source/p/pyelftools/pyelftools-%{pyelftoolsver}.tar.gz
 
-Patch0:    openvswitch-%{ovsver}.patch
+Patch0:    openvswitch-%{patchver}.patch
 
 # The DPDK is designed to optimize througput of network traffic using, among
 # other techniques, carefully crafted assembly instructions.  As such it
@@ -816,7 +817,13 @@ exit 0
 %endif
 
 %changelog
-* Tue Apr 07 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.1-0.0
+* Sun Apr 12 2026 Flavio Leitner <fbl@redhat.com> - 3.7.1-2
+- Merging a916e015a6 pkgtool: refactor to modular, tested, fully.. [RH git: da884592b6]
+    Commit list:
+    a916e015a6 pkgtool: refactor to modular, tested, fully automated system (v2)
+
+
+* Tue Apr 07 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.1-1
 - Merging upstream branch-3.7 [RH git: abea941493]
     Commit list:
     1c9b2cefda stream-ssl: Disable TLS session tickets.
@@ -824,7 +831,7 @@ exit 0
     7921d9c692 Set release date for 3.7.1.
 
 
-* Tue Mar 31 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.22
+* Tue Mar 31 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-9
 - Merging upstream branch-3.7 [RH git: 0fe7181cf4]
     Commit list:
     e1b82e9b7c github: Temporarily disable system tests for DPDK and AF_XDP.
@@ -832,13 +839,13 @@ exit 0
     7dc6fb7baa faq: Update DPDK version for older releases to 23.11.6 and 24.11.4.
 
 
-* Fri Mar 13 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.21
+* Fri Mar 13 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-8
 - Merging upstream branch-3.7 [RH git: e8ff5fb3a9]
     Commit list:
     0d4c78e153 github: Update all the actions to prepare for Node.js 24.
 
 
-* Wed Mar 11 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.20
+* Wed Mar 11 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-7
 - Merging redhat subtree [RH git: 580891d4cc]
     Commit list:
     41662c2205 redhat: fix misc bugs found during security review
@@ -846,13 +853,13 @@ exit 0
     0e5fa41626 pkgtool: fix changelog history and release numbering for point releases
 
 
-* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.19
+* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-6
 - Merging upstream branch-3.7 [RH git: f6b7f613f9]
     Commit list:
     c052c469b0 dpctl: Fix memory leak in ipf-get-status command.
 
 
-* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.18
+* Fri Mar 06 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-5
 - Merging upstream branch-3.7 [RH git: 1e199a141b]
     Commit list:
     f86caea060 netdev-dpdk: Fix vhost_driver_flags data race in destruct.
@@ -864,13 +871,13 @@ exit 0
     a51e475062 github: Fix potential 32-bit package installations.
 
 
-* Thu Feb 26 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.17
+* Thu Feb 26 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-4
 - Merging redhat subtree [RH git: f9a2da7090]
     Commit list:
     8fac66e3f7 pkgtool: fix changelog release mismatch for point releases
 
 
-* Thu Feb 19 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.16
+* Thu Feb 19 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-3
 - Merging upstream branch-3.7 [RH git: c30a493c54]
     Commit list:
     a7cd823a12 python: Fix discarded const qualifier in json_to_python.
@@ -879,13 +886,13 @@ exit 0
     f559623f99 netdev-linux: Fix IFLA_IF_NETNSID value.
 
 
-* Tue Feb 17 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.15
+* Tue Feb 17 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-2
 - Merging upstream branch-3.7 [RH git: 79b4abccba]
     Commit list:
     0a88fdec23 Revert "python: Replace deprecated License with License-Expression (PEP 639).".
 
 
-* Mon Feb 16 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-0.14
+* Mon Feb 16 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.0-1
 - Merging upstream branch-3.7 [RH git: e18b331f62]
     Commit list:
     028e6268c3 Prepare for 3.7.1.
