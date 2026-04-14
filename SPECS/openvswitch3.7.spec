@@ -59,7 +59,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -817,6 +817,12 @@ exit 0
 %endif
 
 %changelog
+* Tue Apr 14 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.1-3
+- Merging upstream branch-3.7 [RH git: 792308e643]
+    Commit list:
+    b53965f1a1 netdev-dpdk: Fix memory leak when configuring rx-steering.
+
+
 * Sun Apr 12 2026 Flavio Leitner <fbl@redhat.com> - 3.7.1-2
 - Merging a916e015a6 pkgtool: refactor to modular, tested, fully.. [RH git: da884592b6]
     Commit list:
