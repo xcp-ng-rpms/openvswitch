@@ -16,7 +16,7 @@ Summary: Virtual switch
 URL: http://www.openvswitch.org/
 Version: 2.17.7
 License: ASL 2.0 and GPLv2
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 Source0: openvswitch-2.17.7.tar.gz
 Patch0: 0001-docs-Run-tbl-preprocessor-in-manpage-check-rule.patch
 Patch1: 0001-ovs.tmac-Fix-troff-warning-in-versions-above-groff-1.patch
@@ -126,10 +126,6 @@ install -d -m 755 %{buildroot}/%{_sysconfdir}/logrotate.d
 install -m 644 xenserver/etc_logrotate.d_openvswitch \
          %{buildroot}/%{_sysconfdir}/logrotate.d/openvswitch
 
-install -d -m 755 %{buildroot}/%{_sysconfdir}/xapi.d/plugins
-install -m 755 xenserver/etc_xapi.d_plugins_openvswitch-cfg-update \
-         %{buildroot}/%{_sysconfdir}/xapi.d/plugins/openvswitch-cfg-update
-
 install -d -m 755 %{buildroot}/%{_datadir}/openvswitch
 install -m 644 vswitchd/vswitch.ovsschema \
          %{buildroot}/%{_datadir}/openvswitch/vswitch.ovsschema
@@ -188,7 +184,6 @@ make check
 #%doc COPYING README
 %config %{_sysconfdir}/sysconfig/openvswitch
 %config %{_sysconfdir}/logrotate.d/openvswitch
-%{_sysconfdir}/xapi.d/plugins/openvswitch-cfg-update
 %dir %{_sysconfdir}/openvswitch
 %dir %{_var}/xen/openvswitch
 %dir %{_var}/lib/openvswitch
@@ -369,6 +364,11 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
+* Fri Sep 25 2026 David Morel <david.morel@vates.tech> - 2.17.7-4.2
+- Drop unused openvswitch-cfg-update as it is replaced by
+  openvswitch-config-update provided by xapi-core. This avoids confusion when
+  debugging on hosts.
+
 * Wed Aug 13 2025 Gaëtan Lehmann <gaetan.lehmann@vates.tech> - 2.17.7-4.1
 - Sync with 2.17.7-4
 - *** Upstream changelog ***
