@@ -369,7 +369,7 @@ tunnels using IPsec.
 %systemd_postun openvswitch-ipsec.service
 
 %changelog
-* Mon Aug 12 2024 Gaëtan Lehmann <gaetan.lehmann@vates.tech> - 2.17.7-4.1
+* Wed Aug 13 2025 Gaëtan Lehmann <gaetan.lehmann@vates.tech> - 2.17.7-4.1
 - Sync with 2.17.7-4
 - *** Upstream changelog ***
   * Wed Jan 22 2025 Alex Brett <alex.brett@cloud.com> - 2.17.7-4
