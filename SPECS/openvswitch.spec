@@ -9,9 +9,19 @@
 # option. For example:
 # rpmbuild -bb --without check rhel/openvswitch-fedora.spec
 
+%define xcpng 1
+
+# Koji sets %%_host to x86_64_v2-koji-linux-gnu, which is not a valid GNU
+# triplet: config.sub rejects it and %%configure fails. Use the plain x86_64
+# triplet (%%_target_platform) for autotools instead.
+%if "%{_host_cpu}" == "x86_64_v2"
+%global _host %{_target_platform}
+%global _build %{_target_platform}
+%endif
+
 # This defines the base package name's version.
 
-%define pkgname openvswitch3.7
+%define pkgname openvswitch
 
 
 %if 0%{?commit:1}
@@ -59,7 +69,7 @@ Summary: Open vSwitch
 Group: System Environment/Daemons daemon/database/utilities
 URL: http://www.openvswitch.org/
 Version: 3.7.1
-Release: 3%{?dist}
+Release: 3.%{?xcpng}%{?dist}
 
 # Nearly all of openvswitch is ASL 2.0.  The bugtool is LGPLv2+, and the
 # lib/sflow*.[ch] files are SISSL
@@ -71,10 +81,10 @@ License: ASL 2.0 and LGPLv2+ and SISSL
 %define dpdksver %(echo %{dpdkver} | cut -d. -f-2)
 # NOTE: DPDK does not currently build for s390x
 # DPDK on aarch64 is not stable enough to be enabled in FDP
-%if 0%{?rhel} > 7 || 0%{?fedora}
+%if !0%{?xcpng} && (0%{?rhel} > 7 || 0%{?fedora})
 %define dpdkarches x86_64 ppc64le
 %else
-%define dpdkarches
+%define dpdkarches ""
 %endif
 
 %define ovsver 3.7.1
@@ -86,6 +96,7 @@ Source: https://github.com/openvswitch/ovs/archive/v%{ovsver}.tar.gz#/openvswitc
 %endif
 Source2: openvswitch.sysusers
 Source3: openvswitch-hugetlbfs.sysusers
+%if !0%{?xcpng}
 Source10: https://fast.dpdk.org/rel/dpdk-%{dpdkver}.tar.xz
 
 %define docutilsver 0.12
@@ -96,13 +107,22 @@ Source100: https://pypi.io/packages/source/d/docutils/docutils-%{docutilsver}.ta
 Source101: https://pypi.io/packages/source/P/Pygments/Pygments-%{pygmentsver}.tar.gz
 Source102: https://pypi.io/packages/source/S/Sphinx/Sphinx-%{sphinxver}.tar.gz
 Source103: https://pypi.io/packages/source/p/pyelftools/pyelftools-%{pyelftoolsver}.tar.gz
+%endif
 
 Patch0:    openvswitch-%{patchver}.patch
 
+# XCP-ng patches
+# - Generated from https://github.com/xcp-ng/openvswitch fork
+# - git format-patch --no-numbered --no-signature --histogram --zero-commit v3.7.1..v3.7.1-9.0
+Patch1001: 0001-CA-153718-use-OPENSSL_ENABLE_MD5_VERIFY-1-in-OpenvSw.patch
+Patch1002: 0002-CP-23098-CA-265107-implement-other_config-enable-ipv.patch
+
+%ifarch %{dpdkarches}
 # The DPDK is designed to optimize througput of network traffic using, among
 # other techniques, carefully crafted assembly instructions.  As such it
 # needs extensive work to port it to other architectures.
 ExclusiveArch: x86_64 aarch64 ppc64le s390x
+%endif
 
 # Do not enable this otherwise YUM will break on any upgrade.
 # Provides: openvswitch
@@ -124,6 +144,7 @@ Conflicts: openvswitch3.4
 Conflicts: openvswitch3.5
 Conflicts: openvswitch3.6
 
+%if !0%{?xcpng}
 # FIXME Sphinx is used to generate some manpages, unfortunately, on RHEL, it's
 # in the -optional repository and so we can't require it directly since RHV
 # doesn't have the -optional repository enabled and so TPS fails
@@ -142,14 +163,19 @@ BuildRequires: python-imaging
 # pygments dependencies
 BuildRequires: python-nose
 %endif
+%endif
 
 BuildRequires: gcc gcc-c++ make
 BuildRequires: autoconf automake libtool
 BuildRequires: systemd-units systemd-rpm-macros openssl openssl-devel
 BuildRequires: python3-devel python3-setuptools
+%if !0%{xcpng}
 BuildRequires: desktop-file-utils
+%endif
 BuildRequires: groff-base graphviz
+%if !0%{xcpng}
 BuildRequires: unbound-devel
+%endif
 BuildRequires: systemtap-sdt-devel
 # make check dependencies
 BuildRequires: procps-ng
@@ -183,7 +209,9 @@ Provides: bundled(dpdk) = %{dpdkver}
 Requires: openssl iproute module-init-tools
 #Upstream kernel commit 4f647e0a3c37b8d5086214128614a136064110c3
 #Requires: kernel >= 3.15.0-0
+%if !0%{?xcpng}
 Requires: openvswitch-selinux-extra-policy
+%endif
 
 %{?sysusers_requires_compat}
 %if ! %rpm_supports_sysysers_m
@@ -258,10 +286,14 @@ This package provides IPsec tunneling support for OVS tunnels.
 %endif
 
 %prep
+%if 0%{?xcpng}
+%setup -q -n ovs-%{ovsver}
+%else
 %if 0%{?commit:1}
 %setup -q -n ovs-%{commit} -a 10
 %else
 %setup -q -n ovs-%{ovsver} -a 10
+%endif
 %endif
 %if ! %{external_sphinx}
 %if 0%{?commit:1}
@@ -278,7 +310,9 @@ This package provides IPsec tunneling support for OVS tunnels.
 %endif
 %endif
 
+%ifarch %{dpdkarches}
 mv dpdk-*/ %{dpdkdir}/
+%endif
 
 %if 0%{?PATCH0:1}%{!?PATCH0:0}
 %patch -P0 -p1
@@ -691,7 +725,9 @@ exit 0
 %{python3_sitearch}/ovs-*.egg-info
 %if "%{version}" >= "3.5.0"
 %{_bindir}/ovs-flowviz
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-flowviz.8*
+%endif
 %endif
 %doc LICENSE
 
@@ -701,14 +737,18 @@ exit 0
 %{_bindir}/ovs-tcpundump
 %{_datadir}/openvswitch/scripts/usdt/*
 %{_mandir}/man1/ovs-pcap.1*
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-tcpdump.8*
 %{_mandir}/man1/ovs-tcpundump.1*
+%endif
 %{_bindir}/ovs-test
 %{_bindir}/ovs-vlan-test
 %{_bindir}/ovs-l3ping
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-test.8*
 %{_mandir}/man8/ovs-vlan-test.8*
 %{_mandir}/man8/ovs-l3ping.8*
+%endif
 %{python3_sitelib}/ovstest
 
 %files devel
@@ -766,25 +806,35 @@ exit 0
 %{_mandir}/man1/ovsdb-client.1*
 %{_mandir}/man1/ovsdb-server.1*
 %{_mandir}/man1/ovsdb-tool.1*
+%if !0%{?xcpng}
 %{_mandir}/man5/ovsdb.5*
+%endif
 %{_mandir}/man5/ovsdb.local-config.5*
 %{_mandir}/man5/ovsdb-server.5.*
 %{_mandir}/man5/ovs-vswitchd.conf.db.5*
 %{_mandir}/man5/vtep.5*
+%if !0%{?xcpng}
 %{_mandir}/man7/ovsdb-server.7*
 %{_mandir}/man7/ovsdb.7*
 %{_mandir}/man7/ovs-actions.7*
+%endif
 %{_mandir}/man7/ovs-fields.7*
 %{_mandir}/man8/vtep-ctl.8*
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-appctl.8*
 %{_mandir}/man8/ovs-ctl.8*
+%endif
 %{_mandir}/man8/ovs-dpctl.8*
 %{_mandir}/man8/ovs-kmod-ctl.8.*
 %{_mandir}/man8/ovs-ofctl.8*
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-pki.8*
+%endif
 %{_mandir}/man8/ovs-vsctl.8*
 %{_mandir}/man8/ovs-vswitchd.8*
+%if !0%{?xcpng}
 %{_mandir}/man8/ovs-parse-backtrace.8*
+%endif
 %{_udevrulesdir}/91-vfio.rules
 %doc LICENSE NOTICE README.rst NEWS rhel/README.RHEL.rst
 %ifarch %{dpdkarches}
