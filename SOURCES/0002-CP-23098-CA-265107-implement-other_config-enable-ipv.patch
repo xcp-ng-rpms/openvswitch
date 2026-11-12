@@ -1,5 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sebastien Rodot <sebastien.rodot@vates.tech>
+Date: Thu, 12 Nov 2026 10:17:52 +0100
+Subject: [PATCH] CP-23098, CA-265107: implement
+ other_config:enable-ipv6-mcast-snooping
+
+Original patches:
+- https://github.com/xcp-ng-rpms/openvswitch/blob/dbed68cb6d068bb6beef20d68aecece029d74684/SOURCES/CP-23098-Add-IPv6-multicast-snooping-toggle.patch
+- https://github.com/xcp-ng-rpms/openvswitch/blob/dbed68cb6d068bb6beef20d68aecece029d74684/SOURCES/CA-265107-When-enable-igmp-snooping-cannot-receive-ipv6-multicast-traffic.patch
+
+The two patches are implementing `other_config:enable-ipv6-mcast-snooping`
+attribute on `Bridge` table, which is used by xen-api for disable IPv6 multicast
+snooping for OVS. The two patches overlaps (second is changing a part of the
+first), so keeping them in one commit.
+
+Multicast snooping (RFC 4541) monitors the Internet Group Management Protocol
+(IGMP) and Multicast Listener Discovery traffic between hosts and multicast
+routers. The default configuraton for OVS is attribute `mcast_snooping_enable`
+on `Bridge` which is disabled by default (`false`).
+
+xen-api setting has global value (defaulting to `false`) to configure IPv6
+multicast snooping if standard multicast snooping is enabled in OVS.
+
+The purpose of the patch is to permit xen-api to enable multicast snooping on
+IPv4-only, and eventually on IPv6 in opt-in way.
+
+The setting has been introduced in xen-api by "CP-23843: Disable IPv6 multicast
+snooping for OVS in XenServer" (commit edf8bcf83a541295621c5a152797b010e652d293).
+
+The patch should be kept for keeping working xen-api feature.
+
+Signed-off-by: Sebastien Rodot <sebastien.rodot@vates.tech>
+---
+ lib/mcast-snooping.c         | 20 ++++++++++++++++++++
+ lib/mcast-snooping.h         |  7 +++++++
+ ofproto/ofproto-dpif-xlate.c |  4 +++-
+ ofproto/ofproto-dpif.c       |  3 +++
+ ofproto/ofproto.h            |  1 +
+ vswitchd/bridge.c            |  2 ++
+ vswitchd/vswitch.xml         |  6 ++++++
+ 7 files changed, 42 insertions(+), 1 deletion(-)
+
 diff --git a/lib/mcast-snooping.c b/lib/mcast-snooping.c
-index 029ca2855..796f1e99b 100644
+index c236343a2..a326bd9fd 100644
 --- a/lib/mcast-snooping.c
 +++ b/lib/mcast-snooping.c
 @@ -51,6 +51,12 @@ mcast_snooping_enabled(const struct mcast_snooping *ms)
@@ -15,7 +57,7 @@ index 029ca2855..796f1e99b 100644
  bool
  mcast_snooping_flood_unreg(const struct mcast_snooping *ms)
  {
-@@ -255,6 +261,20 @@ mcast_snooping_set_flood_unreg(struct mcast_snooping *ms, bool enable)
+@@ -280,6 +286,20 @@ mcast_snooping_set_flood_unreg(struct mcast_snooping *ms, bool enable)
      return prev != enable;
  }
  
@@ -37,10 +79,10 @@ index 029ca2855..796f1e99b 100644
  mcast_group_bundle_lookup(struct mcast_snooping *ms OVS_UNUSED,
                            struct mcast_group *grp, void *port)
 diff --git a/lib/mcast-snooping.h b/lib/mcast-snooping.h
-index f120405da..4cf2a6f3c 100644
+index de42cf826..4257a291d 100644
 --- a/lib/mcast-snooping.h
 +++ b/lib/mcast-snooping.h
-@@ -138,12 +138,16 @@ struct mcast_snooping {
+@@ -150,12 +150,16 @@ struct mcast_snooping {
       * ports, otherwise send them to ports connected to multicast routers. */
      bool flood_unreg;
  
@@ -57,7 +99,7 @@ index f120405da..4cf2a6f3c 100644
  bool mcast_snooping_flood_unreg(const struct mcast_snooping *ms);
  int mcast_mrouter_age(const struct mcast_snooping *ms,
                        const struct mcast_mrouter_bundle *m);
-@@ -165,6 +169,9 @@ void mcast_snooping_set_max_entries(struct mcast_snooping *ms,
+@@ -177,6 +181,9 @@ void mcast_snooping_set_max_entries(struct mcast_snooping *ms,
  bool
  mcast_snooping_set_flood_unreg(struct mcast_snooping *ms, bool enable)
      OVS_REQ_WRLOCK(ms->rwlock);
@@ -68,23 +110,25 @@ index f120405da..4cf2a6f3c 100644
                                     bool flood)
      OVS_REQ_WRLOCK(ms->rwlock);
 diff --git a/ofproto/ofproto-dpif-xlate.c b/ofproto/ofproto-dpif-xlate.c
-index 196bb6dca..76c8a9d33 100644
+index de82e2903..9a8fc8e48 100644
 --- a/ofproto/ofproto-dpif-xlate.c
 +++ b/ofproto/ofproto-dpif-xlate.c
-@@ -3201,7 +3201,7 @@ xlate_normal(struct xlate_ctx *ctx)
-                 xlate_normal_flood(ctx, in_xbundle, &xvlan);
-             }
-             return;
--        } else if (is_mld(flow, wc)) {
-+        } else if (is_mld(flow, wc) && mcast_snooping_ipv6_enabled(ctx->xbridge->ms)) {
-             ctx->xout->slow |= SLOW_ACTION;
-             if (ctx->xin->allow_side_effects && ctx->xin->packet) {
-                 update_mcast_snooping_table(ctx, flow, vlan,
+@@ -3252,7 +3252,9 @@ xlate_normal(struct xlate_ctx *ctx)
+     if (mcast_snooping_enabled(ctx->xbridge->ms)
+         && !eth_addr_is_broadcast(flow->dl_dst)
+         && eth_addr_is_multicast(flow->dl_dst)
+-        && is_ip_any(flow)) {
++        && is_ip_any(flow)
++        && ((flow->dl_type != htons(ETH_TYPE_IPV6))
++            || mcast_snooping_ipv6_enabled(ctx->xbridge->ms))) {
+         struct mcast_snooping *ms = ctx->xbridge->ms;
+         struct mcast_group *grp = NULL;
+ 
 diff --git a/ofproto/ofproto-dpif.c b/ofproto/ofproto-dpif.c
-index bd235ce2b..681585005 100644
+index a02afe8ef..76b5d122d 100644
 --- a/ofproto/ofproto-dpif.c
 +++ b/ofproto/ofproto-dpif.c
-@@ -3742,6 +3742,9 @@ set_mcast_snooping(struct ofproto *ofproto_,
+@@ -3936,6 +3936,9 @@ set_mcast_snooping(struct ofproto *ofproto_,
          if (mcast_snooping_set_flood_unreg(ofproto->ms, s->flood_unreg)) {
              ofproto->backer->need_revalidate = REV_RECONFIGURE;
          }
@@ -95,10 +139,10 @@ index bd235ce2b..681585005 100644
      } else {
          mcast_snooping_unref(ofproto->ms);
 diff --git a/ofproto/ofproto.h b/ofproto/ofproto.h
-index fa7973ac7..82d8278dc 100644
+index 3f85509a1..de03c340a 100644
 --- a/ofproto/ofproto.h
 +++ b/ofproto/ofproto.h
-@@ -189,6 +189,7 @@ struct ofproto_mcast_snooping_settings {
+@@ -203,6 +203,7 @@ struct ofproto_mcast_snooping_settings {
      unsigned int idle_time;     /* Entry is removed after the idle time
                                   * in seconds. */
      unsigned int max_entries;   /* Size of the multicast snooping table. */
@@ -107,10 +151,10 @@ index fa7973ac7..82d8278dc 100644
  
  struct ofproto_mcast_snooping_port_settings {
 diff --git a/vswitchd/bridge.c b/vswitchd/bridge.c
-index 81f073b1c..d95640be2 100644
+index 7a68e19ac..1e17e3809 100644
 --- a/vswitchd/bridge.c
 +++ b/vswitchd/bridge.c
-@@ -2209,6 +2209,8 @@ bridge_configure_mcast_snooping(struct bridge *br)
+@@ -2346,6 +2346,8 @@ bridge_configure_mcast_snooping(struct bridge *br)
  
          br_s.flood_unreg = !smap_get_bool(
              oc, "mcast-snooping-disable-flood-unregistered", false);
@@ -120,10 +164,10 @@ index 81f073b1c..d95640be2 100644
          /* Configure multicast snooping on the bridge */
          if (ofproto_set_mcast_snooping(br->ofproto, &br_s)) {
 diff --git a/vswitchd/vswitch.xml b/vswitchd/vswitch.xml
-index 0c8534f14..8d7a7436c 100644
+index b7a5afc0a..ac3fe340b 100644
 --- a/vswitchd/vswitch.xml
 +++ b/vswitchd/vswitch.xml
-@@ -2420,6 +2420,12 @@
+@@ -2558,6 +2558,12 @@
            unconditionally forwarded to the specific port.
          </p>
        </column>
@@ -136,6 +180,3 @@ index 0c8534f14..8d7a7436c 100644
        <column name="other_config" key="mcast-snooping-flood-reports"
                type='{"type": "boolean"}'>
          <p>
--- 
-2.34.1
-

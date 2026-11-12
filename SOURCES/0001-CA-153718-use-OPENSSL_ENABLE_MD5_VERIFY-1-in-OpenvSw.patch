@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sebastien Marie <semarie@kapouay.eu.org>
+Date: Thu, 12 Nov 2026 09:43:01 +0100
+Subject: [PATCH] CA 153718: use OPENSSL_ENABLE_MD5_VERIFY=1 in OpenvSwitch
+
+Original patch at https://github.com/xcp-ng-rpms/openvswitch/blob/dbed68cb6d068bb6beef20d68aecece029d74684/SOURCES/CA-153718-md5-verification-dvsc.patch
+
+The original patch was adding `export OPENSSL_ENABLE_MD5_VERIFY=1` in
+`ovs-start` script.
+
+`OPENSSL_ENABLE_MD5_VERIFY` was never an upstream OpenSSL feature. It came from
+a Fedora/RHEL downstream patch that disabled MD5 for certificate signature
+verification and used this variable as an opt-out. In 2014 the Fedora OpenSSL
+maintainer [suggested setting it in the OpenVPN client and
+server](https://bugzilla.redhat.com/show_bug.cgi?id=1157260) to allow
+verification of MD5-signed certificates, while saying he would not recommend
+doing so.
+
+The changelog documents it as:
+
+> disable verification of certificate, CRL, and OCSP signatures using MD5 if OPENSSL_ENABLE_MD5_VERIFY environment variable is not set.
+
+Setting it in `ovs-start` script means ovs is expected to accept MD5
+certificates, CRL or OCSP signatures (depending the current security level),
+like with an unpatched OpenSSL.
+
+As OpenSSL rpm still has [the disable MD5
+patch](https://github.com/xcp-ng-rpms/openssl/blob/5ddabd58ecadf0c96408edd1309a4465da426518/SOURCES/0006-Disable-signature-verification-with-totally-unsafe-h.patch),
+we might still want the change in OVS in order to relax the restriction and
+makes OpenSSL to work as unpatched one.
+
+Move the export in ovs-lib (sourced by openvswitch daemons) as the xenserver is gone.
+
+Signed-off-by: Sebastien Rodot <sebastien.rodot@vates.tech>
+---
+ utilities/ovs-lib.in | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/utilities/ovs-lib.in b/utilities/ovs-lib.in
+index dded0b7c7..b27da364f 100644
+--- a/utilities/ovs-lib.in
++++ b/utilities/ovs-lib.in
+@@ -30,6 +30,12 @@ datadir=${OVS_PKGDATADIR-'@pkgdatadir@'}        # /usr/share/openvswitch
+ bindir=${OVS_BINDIR-'@bindir@'}                 # /usr/bin
+ sbindir=${OVS_SBINDIR-'@sbindir@'}              # /usr/sbin
+ 
++# Set OPENSSL_ENABLE_MD5_VERIFY=1 to ovs to accept MD5 certificates, CRL or OCSP 
++# signatures (depending the current security level), like with an unpatched 
++# OpenSSL.
++OPENSSL_ENABLE_MD5_VERIFY=1
++export OPENSSL_ENABLE_MD5_VERIFY
++
+ # /etc/openvswitch or /var/lib/openvswitch
+ if test X"$OVS_DBDIR" != X; then
+     dbdir=$OVS_DBDIR
