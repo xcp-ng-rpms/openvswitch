@@ -867,6 +867,13 @@ exit 0
 %endif
 
 %changelog
+* Thu Nov 12 2026 Sebastien Rodot <sebastien.rodot@vates.tech> - 3.7.1-3.1
+- Switch openvswitch package to c10s-sig-nfv-openvswitch-3.7, with some changes for XCP-ng 9
+- Additional patches from outside NFV:
+  - CA 153718: use OPENSSL_ENABLE_MD5_VERIFY=1 in OpenvSwitch
+  - CP-23098, CA-265107: implement other_config:enable-ipv6-mcast-snooping
+
+
 * Tue Apr 14 2026 Open vSwitch CI <ovs-ci@redhat.com> - 3.7.1-3
 - Merging upstream branch-3.7 [RH git: 792308e643]
     Commit list:
