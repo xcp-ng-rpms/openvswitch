@@ -11,14 +11,6 @@
 
 %define xcpng 1
 
-# Koji sets %%_host to x86_64_v2-koji-linux-gnu, which is not a valid GNU
-# triplet: config.sub rejects it and %%configure fails. Use the plain x86_64
-# triplet (%%_target_platform) for autotools instead.
-%if "%{_host_cpu}" == "x86_64_v2"
-%global _host %{_target_platform}
-%global _build %{_target_platform}
-%endif
-
 # This defines the base package name's version.
 
 %define pkgname openvswitch
